@@ -277,10 +277,11 @@ inline void RenderESP(ImDrawList* drawList)
             drawList->AddCircle(ImVec2(head2D.x, head2D.y), circleRadius, headCircleColor, 0, Options::ESP::HeadCircleThickness);
         }
 
+        float fontSize = (12.f * scale > 10.0f) ? 12.f * scale : 10.0f;
         if (Options::ESP::Name)
         {
+
             const std::string& nameStr = player.Name;
-            float fontSize = (12.f * scale > 10.0f) ? 12.f * scale : 10.0f;
             ImVec2 textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.f, nameStr.c_str());
 
             ImVec2 namePos(newHeadName.x - textSize.x / 2.0f, newHeadName.y);
@@ -295,7 +296,6 @@ inline void RenderESP(ImDrawList* drawList)
         if (Options::ESP::Distance)
         {
             std::string distStr = std::to_string(roundedDistance) + " studs";
-            float fontSize = (12.f * scale > 10.0f) ? 12.f * scale : 10.0f; // Same font size as username
             ImVec2 textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.f, distStr.c_str());
 
             ImVec2 distPos(head2D.x - textSize.x / 2.0f, newLeftLeg.y);

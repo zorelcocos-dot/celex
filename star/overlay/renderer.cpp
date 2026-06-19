@@ -27,19 +27,6 @@ void SetTransparency(HWND hwnd, bool boolean) {
         SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     }
 }
-void DrawNode(RobloxInstance& node) {
-    const auto& children = node.GetChildren();
-    if (children.empty()) {
-        ImGui::BulletText(node.Name().c_str());
-    } else {
-        if (ImGui::TreeNode(node.Name().c_str())) {
-            for (auto child : children) {
-                DrawNode(child);
-            }
-            ImGui::TreePop();
-        }
-    }
-}
 void RenderKeybindList(ImDrawList* drawList) {
     if (!Options::Misc::KeybindList) return;
     ImGuiIO& io = ImGui::GetIO();
@@ -217,8 +204,6 @@ void ShowImgui() {
     ImVec4 clear_color = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     bool done = false;
     bool menu_open = true;
-    int tab = 0;
-    int tab2 = 0;
     while (!done) {
         MSG msg;
         while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE)) {
@@ -353,7 +338,7 @@ void ShowImgui() {
                 draw->AddText(ImVec2(ix + 15, oy), act ? white : textDim, sbicons[i]);
                 draw->AddText(ImVec2(ix + 40, oy), act ? white : textDim, sbn[i]);
 
-                if(hov && ImGui::IsMouseClicked(0)) { mainTab = i; tab2 = 0; }
+                if(hov && ImGui::IsMouseClicked(0)) { mainTab = i; }
             }
 
             // Helper Widgets
