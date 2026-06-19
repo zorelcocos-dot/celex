@@ -285,14 +285,8 @@ inline void RenderESP(ImDrawList* drawList)
 
             ImVec2 namePos(newHeadName.x - textSize.x / 2.0f, newHeadName.y);
             
-            // Draw black outline
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    if (dx != 0 || dy != 0) {
-                        drawList->AddText(font, fontSize, ImVec2(namePos.x + dx, namePos.y + dy), IM_COL32(0, 0, 0, 255), nameStr.c_str());
-                    }
-                }
-            }
+            // Draw clean shadow
+            drawList->AddText(font, fontSize, ImVec2(namePos.x + 1.0f, namePos.y + 1.0f), IM_COL32(0, 0, 0, 255), nameStr.c_str());
             
             // Draw main text
             drawList->AddText(font, fontSize, namePos, color, nameStr.c_str());
@@ -306,14 +300,8 @@ inline void RenderESP(ImDrawList* drawList)
 
             ImVec2 distPos(head2D.x - textSize.x / 2.0f, newLeftLeg.y);
             
-            // Draw black outline
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    if (dx != 0 || dy != 0) {
-                        drawList->AddText(font, fontSize, ImVec2(distPos.x + dx, distPos.y + dy), IM_COL32(0, 0, 0, 255), distStr.c_str());
-                    }
-                }
-            }
+            // Draw clean shadow
+            drawList->AddText(font, fontSize, ImVec2(distPos.x + 1.0f, distPos.y + 1.0f), IM_COL32(0, 0, 0, 255), distStr.c_str());
             
             // Draw main text
             drawList->AddText(font, fontSize, distPos, distanceColor, distStr.c_str());

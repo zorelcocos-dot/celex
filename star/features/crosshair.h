@@ -71,13 +71,10 @@ inline void RenderCrosshair(ImDrawList* drawList)
         ImVec2 p1{ center.x + d.x * (showGap + Options::Crosshair::Size),
                 center.y + d.y * (showGap + Options::Crosshair::Size) };
 
-        // Outline
-        for (int dx = -1; dx <= 1; ++dx)
-            for (int dy = -1; dy <= 1; ++dy)
-                if (dx || dy)
-                    drawList->AddLine({ p0.x + dx, p0.y + dy },
-                        { p1.x + dx, p1.y + dy },
-                        colOut, thick);
+        // Clean drop shadow outline
+        drawList->AddLine({ p0.x + 1.0f, p0.y + 1.0f },
+                          { p1.x + 1.0f, p1.y + 1.0f },
+                          colOut, thick + 0.5f);
 
         // Main line
         drawList->AddLine(p0, p1, colLine, thick);
@@ -99,28 +96,16 @@ inline void RenderCrosshair(ImDrawList* drawList)
         ImU32 colPink = IM_COL32(255, 105, 180, 255); // Pink accent for .win
         ImU32 outlineColor = IM_COL32(0, 0, 0, 255);
 
-        // Draw outline for "Star"
-        for (int dx = -1; dx <= 1; ++dx) {
-            for (int dy = -1; dy <= 1; ++dy) {
-                if (dx || dy) {
-                    drawList->AddText(ImVec2(textPos.x + dx, textPos.y + dy), outlineColor, Star);
-                }
-            }
-        }
+        // Draw clean shadow for "Star"
+        drawList->AddText(ImVec2(textPos.x + 1.0f, textPos.y + 1.0f), outlineColor, Star);
 
         // Draw main text for "Star"
         drawList->AddText(textPos, colWhite, Star);
 
-        // Draw outline for ".win"
-        for (int dx = -1; dx <= 1; ++dx) {
-            for (int dy = -1; dy <= 1; ++dy) {
-                if (dx || dy) {
-                    drawList->AddText(ImVec2(textPos.x + StarW + dx, textPos.y + dy), outlineColor, dotWin);
-                }
-            }
-        }
+        // Draw clean shadow for ".gg"
+        drawList->AddText(ImVec2(textPos.x + StarW + 1.0f, textPos.y + 1.0f), outlineColor, dotWin);
 
-        // Draw main text for ".win"
+        // Draw main text for ".gg"
         drawList->AddText(ImVec2(textPos.x + StarW, textPos.y), colPink, dotWin);
     }
 }
