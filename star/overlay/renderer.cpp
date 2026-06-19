@@ -27,19 +27,6 @@ void SetTransparency(HWND hwnd, bool boolean) {
         SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     }
 }
-void DrawNode(RobloxInstance& node) {
-    const auto& children = node.GetChildren();
-    if (children.empty()) {
-        ImGui::BulletText(node.Name().c_str());
-    } else {
-        if (ImGui::TreeNode(node.Name().c_str())) {
-            for (auto child : children) {
-                DrawNode(child);
-            }
-            ImGui::TreePop();
-        }
-    }
-}
 void RenderKeybindList(ImDrawList* drawList) {
     if (!Options::Misc::KeybindList) return;
     ImGuiIO& io = ImGui::GetIO();
@@ -91,40 +78,50 @@ void RenderKeybindList(ImDrawList* drawList) {
     }
     if (activeBinds.empty()) return;
     // Calculate dimensions - much smaller and compact
-    float padding = 8.0f;
-    float lineHeight = 14.0f;
-    float titleHeight = 20.0f;
-    float minWidth = 150.0f; // Reduced minimum width
-    float maxWidth = minWidth;
+    float paddingX = 12.0f;
+    float paddingY = 8.0f;
+    float lineHeight = 18.0f;
+    float titleHeight = 24.0f;
+    float minWidth = 160.0f;
+    float nameWidths = 0.0f;
+    float statusWidths = 0.0f;
+
     for (const auto& bind : activeBinds) {
-        std::string fullText = bind.first + " " + bind.second;
-        float textWidth = ImGui::CalcTextSize(fullText.c_str()).x;
-        if (textWidth > maxWidth) maxWidth = textWidth;
+        float nW = ImGui::CalcTextSize(bind.first.c_str()).x;
+        float sW = ImGui::CalcTextSize(bind.second.c_str()).x;
+        if (nW > nameWidths) nameWidths = nW;
+        if (sW > statusWidths) statusWidths = sW;
     }
-    float boxWidth = maxWidth + padding * 2;
-    float boxHeight = titleHeight + (activeBinds.size() * lineHeight) + padding;
+
+    float boxWidth = (std::max)(minWidth, nameWidths + statusWidths + paddingX * 3.0f);
+    float boxHeight = titleHeight + (activeBinds.size() * lineHeight) + paddingY;
+
     // Use custom position from sliders
     ImVec2 pos = ImVec2(Options::Misc::KeybindListX, Options::Misc::KeybindListY);
-    // Draw background - fully opaque (255 alpha instead of 200)
-    drawList->AddRectFilled(pos, ImVec2(pos.x + boxWidth, pos.y + boxHeight), IM_COL32(8, 8, 8, 255), 4.0f);
-    drawList->AddRect(pos, ImVec2(pos.x + boxWidth, pos.y + boxHeight), IM_COL32(27, 27, 27, 255), 4.0f);
+
+    // Draw background
+    drawList->AddRectFilled(pos, ImVec2(pos.x + boxWidth, pos.y + boxHeight), IM_COL32(15, 15, 15, 240), 6.0f);
+    drawList->AddRect(pos, ImVec2(pos.x + boxWidth, pos.y + boxHeight), IM_COL32(40, 40, 40, 255), 6.0f);
+
     // Draw title - centered
     const char* title = "Keybinds";
     float titleWidth = ImGui::CalcTextSize(title).x;
     float titleX = pos.x + (boxWidth - titleWidth) / 2.0f;
     drawList->AddText(ImVec2(titleX, pos.y + 4), IM_COL32(255, 255, 255, 255), title);
-    drawList->AddLine(ImVec2(pos.x, pos.y + titleHeight), ImVec2(pos.x + boxWidth, pos.y + titleHeight), IM_COL32(27, 27, 27, 255));
-    // Draw active binds - centered
-    float yOffset = pos.y + titleHeight + 3;
+
+    drawList->AddLine(ImVec2(pos.x, pos.y + titleHeight), ImVec2(pos.x + boxWidth, pos.y + titleHeight), IM_COL32(40, 40, 40, 255));
+
+    // Draw active binds
+    float yOffset = pos.y + titleHeight + 4;
     for (const auto& bind : activeBinds) {
-        std::string fullText = bind.first + " " + bind.second;
-        float textWidth = ImGui::CalcTextSize(fullText.c_str()).x;
-        float textX = pos.x + (boxWidth - textWidth) / 2.0f;
-        // Draw the full text centered
-        drawList->AddText(ImVec2(textX, yOffset), IM_COL32(255, 255, 255, 255), bind.first.c_str());
-        // Draw status in accent color right after the name
-        float nameWidth = ImGui::CalcTextSize(bind.first.c_str()).x;
-        drawList->AddText(ImVec2(textX + nameWidth + 5, yOffset), IM_COL32(main_color.x * 255, main_color.y * 255, main_color.z * 255, 255), bind.second.c_str());
+        // Draw name on left
+        drawList->AddText(ImVec2(pos.x + paddingX, yOffset), IM_COL32(200, 200, 200, 255), bind.first.c_str());
+
+        // Draw status aligned to right
+        float statusW = ImGui::CalcTextSize(bind.second.c_str()).x;
+        drawList->AddText(ImVec2(pos.x + boxWidth - paddingX - statusW, yOffset),
+                         IM_COL32(main_color.x * 255, main_color.y * 255, main_color.z * 255, 255),
+                         bind.second.c_str());
         yOffset += lineHeight;
     }
 }
@@ -207,8 +204,6 @@ void ShowImgui() {
     ImVec4 clear_color = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     bool done = false;
     bool menu_open = true;
-    int tab = 0;
-    int tab2 = 0;
     while (!done) {
         MSG msg;
         while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE)) {
@@ -235,20 +230,17 @@ void ShowImgui() {
             menu_open = !menu_open;
             SetTransparency(hwnd, !menu_open);
         }
-        // Fade animation
+        // Fade animation using exact deltas for smooth visual transitions
         static float menuAlpha = 0.0f;
         static float backgroundAlpha = 0.0f;
-        float fadeSpeed = 0.08f; // Adjust for faster/slower fade
+        float fadeSpeed = 4.0f * ImGui::GetIO().DeltaTime;
+
         if (menu_open) {
-            if (menuAlpha < 1.0f) menuAlpha += fadeSpeed;
-            if (menuAlpha > 1.0f) menuAlpha = 1.0f;
-            if (backgroundAlpha < 0.7f) backgroundAlpha += fadeSpeed;
-            if (backgroundAlpha > 0.7f) backgroundAlpha = 0.7f;
+            menuAlpha = std::min(1.0f, menuAlpha + fadeSpeed);
+            backgroundAlpha = std::min(0.7f, backgroundAlpha + fadeSpeed);
         } else {
-            if (menuAlpha > 0.0f) menuAlpha -= fadeSpeed;
-            if (menuAlpha < 0.0f) menuAlpha = 0.0f;
-            if (backgroundAlpha > 0.0f) backgroundAlpha -= fadeSpeed;
-            if (backgroundAlpha < 0.0f) backgroundAlpha = 0.0f;
+            menuAlpha = std::max(0.0f, menuAlpha - fadeSpeed);
+            backgroundAlpha = std::max(0.0f, backgroundAlpha - fadeSpeed);
         }
         // Dynamic streamproof toggle
         static bool lastStreamProofState = Options::Misc::StreamProof;
@@ -346,7 +338,7 @@ void ShowImgui() {
                 draw->AddText(ImVec2(ix + 15, oy), act ? white : textDim, sbicons[i]);
                 draw->AddText(ImVec2(ix + 40, oy), act ? white : textDim, sbn[i]);
 
-                if(hov && ImGui::IsMouseClicked(0)) { mainTab = i; tab2 = 0; }
+                if(hov && ImGui::IsMouseClicked(0)) { mainTab = i; }
             }
 
             // Helper Widgets
