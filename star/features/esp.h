@@ -96,7 +96,7 @@ inline void RenderESP(ImDrawList* drawList)
         ImVec2 bottomRight(std::max<float>(left2D.x, right2D.x), newLeftLeg.y);
         int roundedDistance = static_cast<int>(std::round(distance));
 
-        std::vector<ImVec2> points = {
+        std::array<ImVec2, 8> points = {
             ImVec2(newHeadPos.x, newHeadPos.y), ImVec2(torso2D.x, torso2D.y), ImVec2(newLeftLeg.x, newLeftLeg.y),
             ImVec2(rLeg2D.x, rLeg2D.y), ImVec2(lArm2D.x, lArm2D.y), ImVec2(rArm2D.x, rArm2D.y),
             ImVec2(left2D.x, left2D.y), ImVec2(right2D.x, right2D.y)
@@ -359,7 +359,7 @@ inline void RenderESP(ImDrawList* drawList)
             float height = (headOffset.y - legOffset.y) - 2.0f;
             float depth = 2.0f;
 
-            std::vector<Vectors::Vector3> corners3D = {
+            std::array<Vectors::Vector3, 8> corners3D = {
                 hrpPos + rightVec * width + upVec * height + lookVec * depth,
                 hrpPos - rightVec * width + upVec * height + lookVec * depth,
                 hrpPos + rightVec * width - upVec * height + lookVec * depth,
@@ -370,17 +370,23 @@ inline void RenderESP(ImDrawList* drawList)
                 hrpPos - rightVec * width - upVec * height - lookVec * depth
             };
 
-            std::vector<ImVec2> corners2D;
-            for (const auto& corner : corners3D)
+            std::array<ImVec2, 8> corners2D;
+            bool valid = true;
+            for (size_t i = 0; i < 8; ++i)
             {
-                auto screenPos = WorldToScreen(corner);
+                auto screenPos = WorldToScreen(corners3D[i]);
                 if (screenPos.x != -1 && screenPos.y != -1)
                 {
-                    corners2D.push_back(ImVec2(screenPos.x, screenPos.y));
+                    corners2D[i] = ImVec2(screenPos.x, screenPos.y);
+                }
+                else
+                {
+                    valid = false;
+                    break;
                 }
             }
 
-            if (corners2D.size() >= 8)
+            if (valid)
             {
                 drawList->AddLine(corners2D[0], corners2D[1], esp3dColor, Options::ESP::ESP3DThickness);
                 drawList->AddLine(corners2D[1], corners2D[3], esp3dColor, Options::ESP::ESP3DThickness);
@@ -397,7 +403,6 @@ inline void RenderESP(ImDrawList* drawList)
                 drawList->AddLine(corners2D[2], corners2D[6], esp3dColor, Options::ESP::ESP3DThickness);
                 drawList->AddLine(corners2D[3], corners2D[7], esp3dColor, Options::ESP::ESP3DThickness);
             }
-        }
     }
 }
 
