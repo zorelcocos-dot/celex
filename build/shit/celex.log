@@ -1,0 +1,107 @@
+﻿C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(533,5): warning MSB8004: Intermediate Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Intermediate Directory.
+C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(534,5): warning MSB8004: Output Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Output Directory.
+  main.cpp
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(176,20): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244: 'argument': conversion from 'double' to 'T', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:         with
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:         [
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:             T=float
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:         ]
+  (compiling source file 'main.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\esp.h(189,60): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\esp.h(189,51): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\esp.h(190,56): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\esp.h(190,47): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\aimbot.h(484,42): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\aimbot.h(484,37): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\aimbot.h(487,52): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\aimbot.h(487,47): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\crosshair.h(19,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+  imgui.cpp
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(176,20): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'overlay/imgui/imgui.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244: 'argument': conversion from 'double' to 'T', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:         with
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:         [
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:             T=float
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:         ]
+  (compiling source file 'overlay/imgui/imgui.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\imgui\imgui.cpp(4992,53): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\imgui\imgui.cpp(5014,47): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\imgui\imgui.cpp(5017,47): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\imgui\imgui.cpp(5086,53): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\imgui\imgui.cpp(5109,32): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\imgui\imgui.cpp(5116,47): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+  renderer.cpp
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(176,20): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244: 'argument': conversion from 'double' to 'T', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:         with
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:         [
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:             T=float
+C:\Users\malek\Downloads\celex (1)\celex\celex\rbx\SDK\sdk.h(186,64): warning C4244:         ]
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\esp.h(189,60): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\esp.h(189,51): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\esp.h(190,56): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\esp.h(190,47): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\aimbot.h(484,42): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\aimbot.h(484,37): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\aimbot.h(487,52): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\aimbot.h(487,47): warning C4244: 'argument': conversion from 'LONG' to 'float', possible loss of data
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\features\crosshair.h(19,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'overlay/renderer.cpp')
+  
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\renderer.cpp(336,96): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\renderer.cpp(336,53): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\renderer.cpp(355,42): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\renderer.cpp(356,42): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\renderer.cpp(522,53): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\malek\Downloads\celex (1)\celex\celex\overlay\renderer.cpp(529,53): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+  Generating code
+  44 of 2507 functions ( 1.8%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    26 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  celex.vcxproj -> C:\Users\malek\Downloads\celex (1)\celex\build\Phantom.win.exe
