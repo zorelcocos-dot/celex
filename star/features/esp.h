@@ -23,10 +23,16 @@ inline void RenderESP(ImDrawList* drawList)
 
     ImFont* font = ImGui::GetFont();
 
-    if (Globals::Caches::CachedPlayerObjects.empty())
+    std::vector<RobloxPlayer> currentPlayers;
+	{
+		std::lock_guard<std::mutex> lock(Globals::Caches::PlayerObjectsMutex);
+		currentPlayers = Globals::Caches::CachedPlayerObjects;
+	}
+
+	if (currentPlayers.empty())
         return;
 
-    for (auto& player : Globals::Caches::CachedPlayerObjects)
+    for (auto& player : currentPlayers)
     {
         if (player.address == Globals::Roblox::LocalPlayer.address)
             continue;

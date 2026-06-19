@@ -53,6 +53,8 @@ namespace Globals
     }
     namespace Caches
     {
+        inline std::mutex PlayersMutex;
+        inline std::mutex PlayerObjectsMutex;
         inline std::vector<RobloxInstance> CachedPlayers;
         inline std::vector<RobloxPlayer> CachedPlayerObjects;
     }

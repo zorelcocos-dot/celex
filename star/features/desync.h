@@ -52,7 +52,7 @@ inline void DesyncLoop()
                         Options::Desync::SpawnPos = { 0.0f, 0.0f, 0.0f };
                     }
                     try {
-                        Memory->write<uint32_t>(Memory->getBaseAddress() + Options::Desync::NextGenReplicatorOffset, 0);
+                        Memory->write<bool>(Memory->getBaseAddress() + Options::Desync::NextGenReplicatorOffset + 0xC0, false);
                     } catch (...) {}
                     held = false;
                     Options::Desync::Toggled = false;
@@ -105,7 +105,7 @@ inline void DesyncLoop()
 
                 // Write flag to true - disable replication
                 try {
-                    Memory->write<uint32_t>(Memory->getBaseAddress() + Options::Desync::NextGenReplicatorOffset, 1);
+                    Memory->write<bool>(Memory->getBaseAddress() + Options::Desync::NextGenReplicatorOffset + 0xC0, true);
                 } catch (...) {}
             }
             else if (!key_pressed && held)
@@ -119,7 +119,7 @@ inline void DesyncLoop()
 
                 // Write flag to false - re-enable replication
                 try {
-                    Memory->write<uint32_t>(Memory->getBaseAddress() + Options::Desync::NextGenReplicatorOffset, 0);
+                    Memory->write<bool>(Memory->getBaseAddress() + Options::Desync::NextGenReplicatorOffset + 0xC0, false);
                 } catch (...) {}
             }
 
