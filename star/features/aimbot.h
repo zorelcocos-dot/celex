@@ -153,7 +153,7 @@ inline RobloxPlayer GetClosestPlayer()
     POINT p;
     GetCursorPos(&p);
 
-    for (auto& player : Globals::Caches::CachedPlayerObjects)
+    for (auto& player : currentPlayers)
     {
         auto HRP = player.HumanoidRootPart;
         if (!HRP.address)
@@ -466,7 +466,13 @@ inline void RunAimbot(ImDrawList* drawList)
     auto localHRP = localCharacter.FindFirstChild("HumanoidRootPart");
     auto Dimensions = Memory->read<Vectors::Vector2>(Globals::Roblox::VisualEngine + Offsets::VisualEngine::Dimensions);
 
-    if (Globals::Caches::CachedPlayerObjects.empty())
+    std::vector<RobloxPlayer> currentPlayers;
+	{
+		std::lock_guard<std::mutex> lock(Globals::Caches::PlayerObjectsMutex);
+		currentPlayers = Globals::Caches::CachedPlayerObjects;
+	}
+
+	if (currentPlayers.empty())
         return;
 
     POINT p;
