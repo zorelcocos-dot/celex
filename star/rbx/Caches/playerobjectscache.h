@@ -41,7 +41,9 @@ inline void CachePlayerObjects()
 				p.Name = player.Name();
 				p.Team = RobloxInstance(0); // NPCs don't have teams
 				p.Character = player;
+				if (!p.Character.address) continue;
 				p.Humanoid = p.Character.FindFirstChildWhichIsA("Humanoid");
+				if (!p.Humanoid.address) continue;
 				p.Health = Memory->read<float>(p.Humanoid.address + Offsets::Humanoid::Health);
 				p.MaxHealth = Memory->read<float>(p.Humanoid.address + Offsets::Humanoid::MaxHealth);
 			}
@@ -51,15 +53,20 @@ inline void CachePlayerObjects()
 				p.Name = player.Name();
 				p.Team = player.Team();
 				p.Character = player.Character();
+				if (!p.Character.address) continue;
 				p.Humanoid = p.Character.FindFirstChildWhichIsA("Humanoid");
-				p.Health = player.Health();
-				p.MaxHealth = player.MaxHealth();
+				if (!p.Humanoid.address) continue;
+				p.Health = Memory->read<float>(p.Humanoid.address + Offsets::Humanoid::Health);
+				p.MaxHealth = Memory->read<float>(p.Humanoid.address + Offsets::Humanoid::MaxHealth);
 			}
 
 			p.RigType = p.Humanoid.RigType();
 
 			p.Head = p.Character.FindFirstChild("Head");
 			p.HumanoidRootPart = p.Character.FindFirstChild("HumanoidRootPart");
+
+			if (!p.Head.address || !p.HumanoidRootPart.address || p.Health <= 0)
+				continue;
 
 			switch (p.RigType)
 			{
