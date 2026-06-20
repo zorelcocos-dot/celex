@@ -153,6 +153,11 @@ inline RobloxPlayer GetClosestPlayer()
     POINT p;
     GetCursorPos(&p);
 
+    std::vector<RobloxPlayer> currentPlayers;
+    {
+        std::lock_guard<std::mutex> lock(Globals::Caches::PlayerObjectsMutex);
+        currentPlayers = Globals::Caches::CachedPlayerObjects;
+    }
     for (auto& player : currentPlayers)
     {
         auto HRP = player.HumanoidRootPart;
