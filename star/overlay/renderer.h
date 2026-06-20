@@ -2,7 +2,7 @@
 #pragma comment (lib, "d3d11.lib")
 #pragma comment(lib, "dwmapi.lib")
 #include <dwmapi.h>
-#include <Windows.h>
+#include <windows.h>
 #include <d3d11.h>
 #include <tchar.h>
 #include <algorithm>

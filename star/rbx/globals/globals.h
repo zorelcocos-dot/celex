@@ -1,10 +1,10 @@
 #pragma once
-#include <Windows.h>
+#include <windows.h>
 #include <cstdint>
 #include <memory>
 
 #include "../../Memory/MemoryManager.h"
-#include "../SDK/sdk.h"
+#include "../SDK/SDK.h"
 
 struct RobloxPlayer
 {

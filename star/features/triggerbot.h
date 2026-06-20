@@ -222,7 +222,6 @@ inline void RunTriggerbot()
     Vectors::Vector2 cursorPos = { static_cast<float>(p.x), static_cast<float>(p.y) };
 
     // Check each player
-    std::vector<RobloxPlayer> currentPlayers;
 	{
 		std::lock_guard<std::mutex> lock(Globals::Caches::PlayerObjectsMutex);
 		currentPlayers = Globals::Caches::CachedPlayerObjects;

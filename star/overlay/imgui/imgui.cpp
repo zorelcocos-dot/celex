@@ -798,7 +798,7 @@ CODE
 #endif
 #ifndef __MINGW32__
 #include <map>
-#include <Windows.h>        // _wfopen, OpenClipboard
+#include <windows.h>        // _wfopen, OpenClipboard
 #else
 #include <windows.h>
 #endif

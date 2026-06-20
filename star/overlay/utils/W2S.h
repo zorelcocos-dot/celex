@@ -1,9 +1,9 @@
 #pragma once
-#include "../rbx/math/math.h"
-#include "../rbx/offsets.h"
-#include "../rbx/globals/options.h"
-#include "../rbx/globals/globals.h"
-#include "imgui/imgui.h"
+#include "../../rbx/math/math.h"
+#include "../../rbx/offsets.h"
+#include "../../rbx/globals/options.h"
+#include "../../rbx/globals/globals.h"
+#include "../imgui/imgui.h"
 
 inline Vectors::Vector2 WorldToScreen(Vectors::Vector3 world)
 {
