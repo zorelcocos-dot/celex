@@ -68,6 +68,11 @@ void FlyLoop()
             // Reset velocity to prevent falling
             velocity = Vectors::Vector3(0, 0, 0);
 
+            // Camera-relative right vector (right = forward x worldUp).
+            // forward = (r02, r12, r22); with up = (0,1,0):
+            //   right = forward x up = (-forward.z, 0, forward.x)
+            Vectors::Vector3 right = Vectors::Vector3(-forward.z, 0.0f, forward.x);
+
             // Apply movement based on key inputs
             if (GetAsyncKeyState('W') & 0x8000)
                 velocity = velocity - forward * speed;
@@ -76,10 +81,10 @@ void FlyLoop()
                 velocity = velocity + forward * speed;
             
             if (GetAsyncKeyState('A') & 0x8000)
-                velocity = velocity - Vectors::Vector3(forward.z, 0, -forward.x) * speed;
+                velocity = velocity - right * speed;   // strafe left
             
             if (GetAsyncKeyState('D') & 0x8000)
-                velocity = velocity + Vectors::Vector3(forward.z, 0, -forward.x) * speed;
+                velocity = velocity + right * speed;   // strafe right
             
             if (GetAsyncKeyState(VK_SPACE) & 0x8000)
                 velocity = velocity + up * speed;

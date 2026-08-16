@@ -90,8 +90,6 @@ inline void RenderAdvancedFOV(ImDrawList* drawList)
                     static_cast<int>(Options::ESP::ChamsColor[2] * 255.f),
                     150
                 );
-                drawList->AddQuadFilled(corners2D[0], corners2D[1], corners2D[3], corners2D[2], fillColor);
-                
                 // Front face
                 drawList->AddQuadFilled(corners2D[0], corners2D[1], corners2D[3], corners2D[2], fillColor);
                 // Back face
@@ -209,15 +207,10 @@ inline void RunTriggerbot()
 	if (currentPlayers.empty())
         return;
 
-    // Get cursor position
+    // Get cursor position. Keep it in screen coordinates so it matches
+    // WorldToScreen() output (which returns screen-space positions).
     POINT p;
     GetCursorPos(&p);
-    
-    HWND robloxWindow = FindWindowA("Roblox", nullptr);
-    if (robloxWindow)
-    {
-        ScreenToClient(robloxWindow, &p);
-    }
 
     Vectors::Vector2 cursorPos = { static_cast<float>(p.x), static_cast<float>(p.y) };
 

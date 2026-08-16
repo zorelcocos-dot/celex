@@ -55,9 +55,9 @@ public:
 		if (childrenStart == 0) return returnVector;
 		// Offsets::Instance::ChildrenEnd is offset inside the children container structure
 		uintptr_t childrenEnd = Memory->read<uintptr_t>(childrenStart + Offsets::Instance::ChildrenEnd);
-		if (childrenEnd == 0 || childrenEnd <= childrenStart) return returnVector;
 		uintptr_t childrenArray = Memory->read<uintptr_t>(childrenStart);
-		if (childrenArray == 0) return returnVector;
+		// Compare end against the actual array pointer (not the container pointer)
+		if (childrenEnd == 0 || childrenArray == 0 || childrenEnd <= childrenArray) return returnVector;
 		// Sanity: limit to avoid absurd iteration on corrupted memory
 		const size_t maxChildren = 5000;
 		size_t count = (childrenEnd - childrenArray) / 0x10;

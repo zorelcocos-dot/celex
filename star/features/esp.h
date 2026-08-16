@@ -53,6 +53,9 @@ inline void RenderESP(ImDrawList* drawList)
         if (player.address == Globals::Roblox::LocalPlayer.address)
             continue;
 
+        if (Options::ESP::TeamCheck && player.Team.address == localTeam.address)
+            continue;
+
         if (player.Health <= 0)
             continue;
 
