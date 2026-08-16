@@ -1,4 +1,7 @@
 #pragma once
+#include <cstdint>
+#include <string>
+#include "../math/math.h"
 #include "globals.h"
 
 namespace Options

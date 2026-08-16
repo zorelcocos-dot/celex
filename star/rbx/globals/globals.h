@@ -2,6 +2,9 @@
 #include <windows.h>
 #include <cstdint>
 #include <memory>
+#include <mutex>
+#include <vector>
+#include <string>
 
 #include "../../Memory/MemoryManager.h"
 #include "../SDK/SDK.h"
@@ -44,12 +47,12 @@ namespace Globals
     namespace Roblox
     {
         inline RobloxInstance DataModel(0);
-        inline uintptr_t VisualEngine;
+        inline uintptr_t VisualEngine = 0;
         inline RobloxInstance Workspace(0);
         inline RobloxInstance Players(0);
         inline RobloxInstance Camera(0);
         inline RobloxInstance LocalPlayer(0);
-        inline int lastPlaceID;
+        inline int lastPlaceID = 0;
     }
     namespace Caches
     {
@@ -59,4 +62,5 @@ namespace Globals
         inline std::vector<RobloxPlayer> CachedPlayerObjects;
     }
     inline std::string executablePath;
+    inline std::string configsPath;
 }

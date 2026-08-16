@@ -58,6 +58,9 @@ uintptr_t MemoryManager::getModuleAddress(const std::string& moduleName) {
 bool MemoryManager::attachToProcess(const std::string& processName)
 {
 	auto pid = getProcessId(processName);
+	if (pid == 0) {
+		return false;
+	}
 	HANDLE process = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
 
 	if (process == INVALID_HANDLE_VALUE || !process) {
@@ -68,30 +71,63 @@ bool MemoryManager::attachToProcess(const std::string& processName)
 	processId = pid;
 
 	baseAddress = getModuleAddress(processName);
+	if (baseAddress == 0) {
+		// Base address not found - still consider attached but log
+		CloseHandle(process);
+		processHandle = nullptr;
+		processId = 0;
+		return false;
+	}
 
 	return true;
 }
 
 
 void MemoryManager::readRaw(uintptr_t address, void* buffer, uintptr_t size) {
-	Luck_ReadVirtualMemory(processHandle, reinterpret_cast<void*>(address), &buffer, size, nullptr);
+	if (!processHandle || !buffer || address == 0 || size == 0)
+		return;
+	Luck_ReadVirtualMemory(processHandle, reinterpret_cast<void*>(address), buffer, size, nullptr);
 }
 
 std::string MemoryManager::readString(uintptr_t address) {
+	if (address == 0 || !processHandle)
+		return "";
 	std::string result;
-	char character;
-	int offset = 0;
+	result.reserve(32);
 
 	int32_t StrLength = read<int32_t>(address + 0x18);
+	// Validate length to avoid absurd allocations / loops
+	if (StrLength < 0 || StrLength > 2048)
+		return "";
 
+	uintptr_t strAddress = address;
 	if (StrLength >= 16) {
-		address = read<uintptr_t>(address);
+		strAddress = read<uintptr_t>(address);
+		if (strAddress == 0)
+			return "";
+		// Limit to StrLength to avoid reading past string
+		for (int offset = 0; offset < StrLength; ++offset)
+		{
+			char character = read<char>(strAddress + offset);
+			if (character == 0)
+				break;
+			result.push_back(character);
+			// Safety cap
+			if ((int)result.size() >= StrLength)
+				break;
+		}
+		return result;
 	}
 
-	while ((character = read<char>(address + offset)) != 0)
+	// SSO - small string stored inline
+	for (int offset = 0; offset < StrLength; ++offset)
 	{
+		char character = read<char>(strAddress + offset);
+		if (character == 0)
+			break;
 		result.push_back(character);
-		offset += sizeof(character);
+		if ((int)result.size() > 64)
+			break;
 	}
 
 	return result;

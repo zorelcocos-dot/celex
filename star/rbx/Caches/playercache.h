@@ -11,17 +11,21 @@ inline void CachePlayers()
 
 	while (true)
 	{
+		try {
 		tempList.clear();
+		tempList.reserve(64);
 
 		// Get local player's character to exclude it from NPC detection
-		auto localCharacter = Globals::Roblox::LocalPlayer.Character();
+		RobloxInstance localCharacter(0);
+		if (Globals::Roblox::LocalPlayer.address != 0)
+			localCharacter = Globals::Roblox::LocalPlayer.Character();
 
 		// Cache real players from Players service
-		auto children = Globals::Roblox::Players.GetChildren();
-		if (!children.empty())
-		{
+		if (Globals::Roblox::Players.address != 0) {
+			auto children = Globals::Roblox::Players.GetChildren();
 			for (auto& player : children)
 			{
+				if (!player.address) continue;
 				tempList.push_back(player);
 			}
 		}
@@ -87,9 +91,8 @@ inline void CachePlayers()
 			std::lock_guard<std::mutex> lock(Globals::Caches::PlayersMutex);
 			Globals::Caches::CachedPlayers = tempList;
 		}
-
+		} catch (...) {}
 		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-
 	}
 }
 

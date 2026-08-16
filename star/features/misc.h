@@ -20,13 +20,19 @@ inline void MiscLoop()
 			Globals::Roblox::Camera.SetFOV(Options::Misc::FOV);
 		}
 		
-		// Headless feature
-		if (Options::ESP::Headless)
+		// Headless feature: toggle transparency, restore when disabled
 		{
 			auto head = character.FindFirstChild("Head");
 			if (head.address != 0)
 			{
-				Memory->write<float>(head.address + Offsets::BasePart::Transparency, 1.0f);
+				if (Options::ESP::Headless)
+					Memory->write<float>(head.address + Offsets::BasePart::Transparency, 1.0f);
+				else {
+					// Restore to visible if previously hidden (check current transparency)
+					float curTrans = Memory->read<float>(head.address + Offsets::BasePart::Transparency);
+					if (curTrans >= 0.99f)
+						Memory->write<float>(head.address + Offsets::BasePart::Transparency, 0.0f);
+				}
 			}
 		}
 		

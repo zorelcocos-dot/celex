@@ -99,9 +99,12 @@ int main()
     }
 
     log(std::string("Roblox PID -> " + std::to_string(Memory->getProcessId())), 1);
-    log(std::string("Roblox Base Address -> 0x" + toHexString(std::to_string(Memory->getBaseAddress()), false, true)), 1);
+    log(std::string("Roblox Base Address -> 0x" + toHexString(Memory->getBaseAddress(), false, true)), 1);
 
     Globals::executablePath = GetExecutableDir();
+    Globals::configsPath = Globals::executablePath + "\\configs";
+    // Ensure configs directory exists
+    try { std::filesystem::create_directories(Globals::configsPath); } catch (...) {}
 
     auto fakeDataModel = Memory->read<uintptr_t>(Memory->getBaseAddress() + Offsets::FakeDataModel::Pointer);
     auto dataModel = RobloxInstance(Memory->read<uintptr_t>(fakeDataModel + Offsets::FakeDataModel::RealDataModel));
@@ -131,14 +134,14 @@ int main()
 
     Globals::Roblox::LocalPlayer = RobloxInstance(Memory->read<uintptr_t>(Globals::Roblox::Players.address + Offsets::Player::LocalPlayer));
 
-    Globals::Roblox::lastPlaceID = Memory->read<int>(Globals::Roblox::DataModel.address + Offsets::DataModel::PlaceId);;
+    Globals::Roblox::lastPlaceID = Memory->read<int>(Globals::Roblox::DataModel.address + Offsets::DataModel::PlaceId);
 
-    log(std::string("DataModel -> 0x" + toHexString(std::to_string(Globals::Roblox::DataModel.address), false, true)), 1);
-    log(std::string("VisualEngine -> 0x" + toHexString(std::to_string(Globals::Roblox::VisualEngine), false, true)), 1);
+    log(std::string("DataModel -> 0x" + toHexString(Globals::Roblox::DataModel.address, false, true)), 1);
+    log(std::string("VisualEngine -> 0x" + toHexString(Globals::Roblox::VisualEngine, false, true)), 1);
 
-    log(std::string("Workspace -> 0x" + toHexString(std::to_string(Globals::Roblox::Workspace.address), false, true)), 1);
-    log(std::string("Players -> 0x" + toHexString(std::to_string(Globals::Roblox::Players.address), false, true)), 1);
-    log(std::string("Camera -> 0x" + toHexString(std::to_string(Globals::Roblox::Camera.address), false, true)), 1);
+    log(std::string("Workspace -> 0x" + toHexString(Globals::Roblox::Workspace.address, false, true)), 1);
+    log(std::string("Players -> 0x" + toHexString(Globals::Roblox::Players.address, false, true)), 1);
+    log(std::string("Camera -> 0x" + toHexString(Globals::Roblox::Camera.address, false, true)), 1);
 
     log(std::string("Logged in as " + Globals::Roblox::LocalPlayer.Name()), 1);
 

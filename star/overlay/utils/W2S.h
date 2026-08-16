@@ -7,6 +7,8 @@
 
 inline Vectors::Vector2 WorldToScreen(Vectors::Vector3 world)
 {
+    if (Globals::Roblox::VisualEngine == 0)
+        return { -1, -1 };
     Matrixes::Matrix4 viewmatrix = Memory->read<Matrixes::Matrix4>(Globals::Roblox::VisualEngine + Offsets::VisualEngine::ViewMatrix);
 
     Vectors::Vector4 quaternion;
@@ -17,7 +19,7 @@ inline Vectors::Vector2 WorldToScreen(Vectors::Vector3 world)
     quaternion.w = (world.x * viewmatrix.data[12]) + (world.y * viewmatrix.data[13]) + (world.z * viewmatrix.data[14]) + viewmatrix.data[15];
 
     if (quaternion.w < 0.1f)
-        return{ -1, -1 };
+        return { -1, -1 };
 
     float inv_w = 1.0f / quaternion.w;
     Vectors::Vector3 ndc;
@@ -25,12 +27,25 @@ inline Vectors::Vector2 WorldToScreen(Vectors::Vector3 world)
     ndc.y = quaternion.y * inv_w;
     ndc.z = quaternion.z * inv_w;
 
-    HWND hwnd = FindWindowA(NULL, "Roblox");
+    // Cache HWND to avoid FindWindow every call; refresh periodically
+    static HWND cachedHwnd = nullptr;
+    static DWORD lastFind = 0;
+    DWORD now = GetTickCount();
+    if (cachedHwnd == nullptr || now - lastFind > 1000) {
+        cachedHwnd = FindWindowA(NULL, "Roblox");
+        lastFind = now;
+    }
+    HWND hwnd = cachedHwnd;
+    if (!hwnd || !IsWindow(hwnd))
+        return { -1, -1 };
 
-    RECT clientRect;
-    GetClientRect(hwnd, &clientRect);
-    int width = clientRect.right;
-    int height = clientRect.bottom;
+    RECT clientRect{};
+    if (!GetClientRect(hwnd, &clientRect))
+        return { -1, -1 };
+    int width = clientRect.right - clientRect.left;
+    int height = clientRect.bottom - clientRect.top;
+    if (width <= 0 || height <= 0)
+        return { -1, -1 };
 
     POINT point = { 0, 0 };
     ClientToScreen(hwnd, &point);
@@ -39,7 +54,7 @@ inline Vectors::Vector2 WorldToScreen(Vectors::Vector3 world)
 
     return
     {
-        ((Dimensions.x / 2.0f) * ndc.x + (Dimensions.x / 2.0f)) + point.x,
-        (-(Dimensions.y / 2.0f) * ndc.y + (Dimensions.y / 2.0f)) + point.y
+        ((Dimensions.x / 2.0f) * ndc.x + (Dimensions.x / 2.0f)) + (float)point.x,
+        (-(Dimensions.y / 2.0f) * ndc.y + (Dimensions.y / 2.0f)) + (float)point.y
     };
 }

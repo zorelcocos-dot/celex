@@ -6,9 +6,11 @@
 inline void CachePlayerObjects()
 {
 	std::vector<RobloxPlayer> tempList;
+	tempList.reserve(64);
 
 	while (true)
 	{
+		try {
 		tempList.clear();
 
 		std::vector<RobloxInstance> currentPlayers;
@@ -112,7 +114,7 @@ inline void CachePlayerObjects()
 			std::lock_guard<std::mutex> lock(Globals::Caches::PlayerObjectsMutex);
 			Globals::Caches::CachedPlayerObjects = tempList;
 		}
-
+		} catch (...) {}
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	}
 }

@@ -119,16 +119,18 @@ inline Vectors::Vector3 GetTargetPosition(const RobloxPlayer& player)
             break;
     }
     
-    // Apply prediction if enabled
+    // Apply prediction if enabled (guard against division by zero)
     if (Options::Aimbot::Prediction && targetPart.address != 0)
     {
         Vectors::Vector3 velocity = GetVelocity(targetPart);
         
+        float predX = Options::Aimbot::PredictionX != 0.f ? Options::Aimbot::PredictionX : 1.0f;
+        float predY = Options::Aimbot::PredictionY != 0.f ? Options::Aimbot::PredictionY : 1.0f;
         // Divide velocity by prediction factors (higher value = less prediction)
         Vectors::Vector3 predictionOffset = {
-            velocity.x / Options::Aimbot::PredictionX,
-            velocity.y / Options::Aimbot::PredictionY,
-            velocity.z / Options::Aimbot::PredictionX
+            velocity.x / predX,
+            velocity.y / predY,
+            velocity.z / predX
         };
         
         // Add prediction offset to base position
@@ -180,7 +182,7 @@ inline RobloxPlayer GetClosestPlayer()
         auto targetPos = GetTargetPosition(player);
         auto targetPos2D = WorldToScreen(targetPos);
 
-        if (targetPos2D.x == -1 && targetPos2D.y == -1)
+        if (targetPos2D.x == -1 || targetPos2D.y == -1)
             continue;
 
         Vectors::Vector3 diff = localHRP.Position() - targetPos;

@@ -25,33 +25,49 @@ public:
 
 	inline std::string Name() const
 	{
-		return Memory->readString(Memory->read<uintptr_t>(address + Offsets::Instance::Name));
+		if (address == 0) return "";
+		uintptr_t namePtr = Memory->read<uintptr_t>(address + Offsets::Instance::Name);
+		if (namePtr == 0) return "";
+		return Memory->readString(namePtr);
 	}
 
 	inline std::string Class() const
 	{
-		return Memory->readString(Memory->read<uintptr_t>(Memory->read<uintptr_t>(address + Offsets::Instance::ClassDescriptor) + Offsets::Instance::ClassName));
+		if (address == 0) return "";
+		uintptr_t classDesc = Memory->read<uintptr_t>(address + Offsets::Instance::ClassDescriptor);
+		if (classDesc == 0) return "";
+		uintptr_t classNamePtr = Memory->read<uintptr_t>(classDesc + Offsets::Instance::ClassName);
+		if (classNamePtr == 0) return "";
+		return Memory->readString(classNamePtr);
 	}
 
 	inline bool IsA(std::string className) const
 	{
-		if (Class() == className)
-		{
-			return true;
-		}
-		return false;
+		if (address == 0) return false;
+		return Class() == className;
 	}
 
 	inline std::vector<RobloxInstance> GetChildren() const
 	{
-		uintptr_t childrenStart = Memory->read<uintptr_t>(address + Offsets::Instance::ChildrenStart);
-		uintptr_t childrenEnd = Memory->read<uintptr_t>(childrenStart + Offsets::Instance::ChildrenEnd);
-
 		std::vector<RobloxInstance> returnVector;
+		if (address == 0) return returnVector;
+		uintptr_t childrenStart = Memory->read<uintptr_t>(address + Offsets::Instance::ChildrenStart);
+		if (childrenStart == 0) return returnVector;
+		// Offsets::Instance::ChildrenEnd is offset inside the children container structure
+		uintptr_t childrenEnd = Memory->read<uintptr_t>(childrenStart + Offsets::Instance::ChildrenEnd);
+		if (childrenEnd == 0 || childrenEnd <= childrenStart) return returnVector;
+		uintptr_t childrenArray = Memory->read<uintptr_t>(childrenStart);
+		if (childrenArray == 0) return returnVector;
+		// Sanity: limit to avoid absurd iteration on corrupted memory
+		const size_t maxChildren = 5000;
+		size_t count = (childrenEnd - childrenArray) / 0x10;
+		if (count > maxChildren) return returnVector;
 
-		for (uintptr_t child = Memory->read<uintptr_t>(childrenStart); child < childrenEnd; child += 0x10)
+		for (uintptr_t child = childrenArray; child < childrenEnd; child += 0x10)
 		{
-			returnVector.emplace_back(RobloxInstance(Memory->read<uintptr_t>(child)));
+			uintptr_t childPtr = Memory->read<uintptr_t>(child);
+			if (childPtr == 0) continue;
+			returnVector.emplace_back(RobloxInstance(childPtr));
 		}
 
 		return returnVector;
@@ -61,37 +77,48 @@ public:
 	{
 		for (auto& child : this->GetChildren())
 		{
+			if (!child.address) continue;
 			if (name == "")
 				return child;
 
+			// Avoid expensive Name() read if string comparison likely fails quickly?
 			if (child.Name() == name)
 				return child;
 		}
-		return 0;
+		return RobloxInstance(0);
 	}
 
 	inline RobloxInstance FindFirstChildWhichIsA(std::string className = "") const
 	{
+		if (className.empty()) return RobloxInstance(0);
 		for (auto& child : this->GetChildren())
 		{
+			if (!child.address) continue;
 			if (child.Class() == className)
 				return child;
 		}
-		return 0;
+		return RobloxInstance(0);
 	}
 
 	inline Vectors::Vector3 Position() const
 	{
-		return Memory->read<Vectors::Vector3>(Memory->read<uintptr_t>(address + Offsets::BasePart::Primitive) + Offsets::Primitive::Position); // offsets::Primitive) + offsets::Position
+		if (address == 0) return Vectors::Vector3{0,0,0};
+		uintptr_t prim = Memory->read<uintptr_t>(address + Offsets::BasePart::Primitive);
+		if (prim == 0) return Vectors::Vector3{0,0,0};
+		return Memory->read<Vectors::Vector3>(prim + Offsets::Primitive::Position);
 	}
 
 	inline Vectors::Vector3 Size() const
 	{
-		return Memory->read<Vectors::Vector3>(Memory->read<uintptr_t>(address + Offsets::BasePart::Primitive) + Offsets::Primitive::Size); // offsets::Primitive) + offsets::PartSize
+		if (address == 0) return Vectors::Vector3{0,0,0};
+		uintptr_t prim = Memory->read<uintptr_t>(address + Offsets::BasePart::Primitive);
+		if (prim == 0) return Vectors::Vector3{0,0,0};
+		return Memory->read<Vectors::Vector3>(prim + Offsets::Primitive::Size);
 	}
 
 	inline sCFrame CFrame() const
 	{
+		if (address == 0) return sCFrame{};
 		if (Class() == "Camera")
 		{
 			auto rotation = Memory->read<Matrixes::Matrix3x3>(address + Offsets::Camera::Rotation);
@@ -109,6 +136,7 @@ public:
 		else
 		{
 			uintptr_t primitiveAddr = Memory->read<uintptr_t>(address + Offsets::BasePart::Primitive);
+			if (primitiveAddr == 0) return sCFrame{};
 			return Memory->read<sCFrame>(primitiveAddr + Offsets::Primitive::Rotation);
 		}
 	}

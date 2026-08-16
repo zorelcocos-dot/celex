@@ -147,57 +147,66 @@ inline json CreateConfig(std::string configName)
 inline void LoadConfig(std::string configName)
 {
     std::ifstream f(Globals::configsPath + "\\" + configName);
-    json data = json::parse(f);
+    if (!f.is_open()) return;
+    json data;
+    try { data = json::parse(f); } catch (...) { return; }
+    if (!data.contains("ESP") || !data.contains("Aimbot") || !data.contains("Misc")) return;
 
+    try {
     //ESP Loading
-
-    Options::ESP::TeamCheck = data["ESP"]["Team Check"];
+    if (data["ESP"].contains("Team Check")) Options::ESP::TeamCheck = data["ESP"]["Team Check"];
     
     if (data["ESP"].contains("Box Type"))
         Options::ESP::BoxType = data["ESP"]["Box Type"];
     else if (data["ESP"].contains("Box"))
     {
-        // Backward compatibility: convert old Box boolean to BoxType
         bool oldBox = data["ESP"]["Box"];
         Options::ESP::BoxType = oldBox ? 1 : 0;
     }
     
-    Options::ESP::Tracers = data["ESP"]["Tracers"];
-    Options::ESP::TracersStart = data["ESP"]["TracersStart"];
-    Options::ESP::Skeleton = data["ESP"]["Skeleton"];
-    Options::ESP::Name = data["ESP"]["Name"];
-    Options::ESP::Distance = data["ESP"]["Distance"];
-    Options::ESP::Health = data["ESP"]["Health"];
-    Options::ESP::TracerThickness = data["ESP"]["Tracer Thickness"];
-    Options::ESP::HeadCircle = data["ESP"]["Head Circles"];
-    Options::ESP::RemoveBorders = data["ESP"]["Remove Borders"];
+    if (data["ESP"].contains("Tracers")) Options::ESP::Tracers = data["ESP"]["Tracers"];
+    if (data["ESP"].contains("TracersStart")) Options::ESP::TracersStart = data["ESP"]["TracersStart"];
+    if (data["ESP"].contains("Skeleton")) Options::ESP::Skeleton = data["ESP"]["Skeleton"];
+    if (data["ESP"].contains("Name")) Options::ESP::Name = data["ESP"]["Name"];
+    if (data["ESP"].contains("Distance")) Options::ESP::Distance = data["ESP"]["Distance"];
+    if (data["ESP"].contains("Health")) Options::ESP::Health = data["ESP"]["Health"];
+    if (data["ESP"].contains("Tracer Thickness")) Options::ESP::TracerThickness = data["ESP"]["Tracer Thickness"];
+    if (data["ESP"].contains("Head Circles")) Options::ESP::HeadCircle = data["ESP"]["Head Circles"];
+    if (data["ESP"].contains("Remove Borders")) Options::ESP::RemoveBorders = data["ESP"]["Remove Borders"];
     
     if (data["ESP"].contains("Headless"))
         Options::ESP::Headless = data["ESP"]["Headless"];
 
-    Options::ESP::Color[0] = data["ESP"]["Name Color"][0];
-    Options::ESP::Color[1] = data["ESP"]["Name Color"][1];
-    Options::ESP::Color[2] = data["ESP"]["Name Color"][2];
-
-    Options::ESP::BoxColor[0] = data["ESP"]["Box Color"][0];
-    Options::ESP::BoxColor[1] = data["ESP"]["Box Color"][1];
-    Options::ESP::BoxColor[2] = data["ESP"]["Box Color"][2];
-
-    Options::ESP::DistanceColor[0] = data["ESP"]["Distance Color"][0];
-    Options::ESP::DistanceColor[1] = data["ESP"]["Distance Color"][1];
-    Options::ESP::DistanceColor[2] = data["ESP"]["Distance Color"][2];
-
-    Options::ESP::TracerColor[0] = data["ESP"]["Tracers Color"][0];
-    Options::ESP::TracerColor[1] = data["ESP"]["Tracers Color"][1];
-    Options::ESP::TracerColor[2] = data["ESP"]["Tracers Color"][2];
-
-    Options::ESP::ESP3DColor[0] = data["ESP"]["3D ESP Color"][0];
-    Options::ESP::ESP3DColor[1] = data["ESP"]["3D ESP Color"][1];
-    Options::ESP::ESP3DColor[2] = data["ESP"]["3D ESP Color"][2];
-
-    Options::ESP::HeadCircleColor[0] = data["ESP"]["Head Circles Color"][0];
-    Options::ESP::HeadCircleColor[1] = data["ESP"]["Head Circles Color"][1];
-    Options::ESP::HeadCircleColor[2] = data["ESP"]["Head Circles Color"][2];
+    if (data["ESP"].contains("Name Color")) {
+        Options::ESP::Color[0] = data["ESP"]["Name Color"][0];
+        Options::ESP::Color[1] = data["ESP"]["Name Color"][1];
+        Options::ESP::Color[2] = data["ESP"]["Name Color"][2];
+    }
+    if (data["ESP"].contains("Box Color")) {
+        Options::ESP::BoxColor[0] = data["ESP"]["Box Color"][0];
+        Options::ESP::BoxColor[1] = data["ESP"]["Box Color"][1];
+        Options::ESP::BoxColor[2] = data["ESP"]["Box Color"][2];
+    }
+    if (data["ESP"].contains("Distance Color")) {
+        Options::ESP::DistanceColor[0] = data["ESP"]["Distance Color"][0];
+        Options::ESP::DistanceColor[1] = data["ESP"]["Distance Color"][1];
+        Options::ESP::DistanceColor[2] = data["ESP"]["Distance Color"][2];
+    }
+    if (data["ESP"].contains("Tracers Color")) {
+        Options::ESP::TracerColor[0] = data["ESP"]["Tracers Color"][0];
+        Options::ESP::TracerColor[1] = data["ESP"]["Tracers Color"][1];
+        Options::ESP::TracerColor[2] = data["ESP"]["Tracers Color"][2];
+    }
+    if (data["ESP"].contains("3D ESP Color")) {
+        Options::ESP::ESP3DColor[0] = data["ESP"]["3D ESP Color"][0];
+        Options::ESP::ESP3DColor[1] = data["ESP"]["3D ESP Color"][1];
+        Options::ESP::ESP3DColor[2] = data["ESP"]["3D ESP Color"][2];
+    }
+    if (data["ESP"].contains("Head Circles Color")) {
+        Options::ESP::HeadCircleColor[0] = data["ESP"]["Head Circles Color"][0];
+        Options::ESP::HeadCircleColor[1] = data["ESP"]["Head Circles Color"][1];
+        Options::ESP::HeadCircleColor[2] = data["ESP"]["Head Circles Color"][2];
+    }
 
     if (data["ESP"].contains("Chams Color"))
     {
@@ -207,141 +216,76 @@ inline void LoadConfig(std::string configName)
     }
 
     // Aimbot Loading
-
-    Options::Aimbot::AimbotKey = data["Aimbot"]["Aimbot Key"];
-    Options::Aimbot::AimingType = data["Aimbot"]["Aiming Type"];
-    
-    if (data["Aimbot"].contains("Toggle Type"))
-        Options::Aimbot::ToggleType = data["Aimbot"]["Toggle Type"];
-    
-    Options::Aimbot::Aimbot = data["Aimbot"]["Aimbot"];
-    Options::Aimbot::TeamCheck = data["Aimbot"]["Team Check"];
-    Options::Aimbot::DownedCheck = data["Aimbot"]["Downed Check"];
-    Options::Aimbot::StickyAim = data["Aimbot"]["Sticky Aim"];
-    Options::Aimbot::TargetBone = data["Aimbot"]["Target Bone"];
-    
-    if (data["Aimbot"].contains("Air Target Bone"))
-        Options::Aimbot::AirTargetBone = data["Aimbot"]["Air Target Bone"];
-    
-    Options::Aimbot::FOV = data["Aimbot"]["FOV"];
-    Options::Aimbot::ShowFOV = data["Aimbot"]["Show FOV"];
-    
-    if (data["Aimbot"].contains("Show FOV Fill"))
-        Options::Aimbot::ShowFOVFill = data["Aimbot"]["Show FOV Fill"];
-
-    Options::Aimbot::FOVColor[0] = data["Aimbot"]["FOV Color"][0];
-    Options::Aimbot::FOVColor[1] = data["Aimbot"]["FOV Color"][1];
-    Options::Aimbot::FOVColor[2] = data["Aimbot"]["FOV Color"][2];
-
-    Options::Aimbot::FOVFillColor[0] = data["Aimbot"]["FOV Fill Color"][0];
-    Options::Aimbot::FOVFillColor[1] = data["Aimbot"]["FOV Fill Color"][1];
-    Options::Aimbot::FOVFillColor[2] = data["Aimbot"]["FOV Fill Color"][2];
-
-    if (data["Aimbot"].contains("FOV Thickness"))
-        Options::Aimbot::FOVThickness = data["Aimbot"]["FOV Thickness"];
-
-    Options::Aimbot::Smoothness = data["Aimbot"]["Smoothness"];
-    
-    if (data["Aimbot"].contains("Smoothness Curve"))
-        Options::Aimbot::SmoothnessCurve = data["Aimbot"]["Smoothness Curve"];
-    
-    Options::Aimbot::Range = data["Aimbot"]["Range"];
-    
-    if (data["Aimbot"].contains("Prediction"))
-        Options::Aimbot::Prediction = data["Aimbot"]["Prediction"];
-    
-    if (data["Aimbot"].contains("Prediction X"))
-        Options::Aimbot::PredictionX = data["Aimbot"]["Prediction X"];
-    
-    if (data["Aimbot"].contains("Prediction Y"))
-        Options::Aimbot::PredictionY = data["Aimbot"]["Prediction Y"];
-    
-    if (data["Aimbot"].contains("Shake"))
-        Options::Aimbot::Shake = data["Aimbot"]["Shake"];
-    
-    if (data["Aimbot"].contains("Shake Intensity"))
-        Options::Aimbot::ShakeIntensity = data["Aimbot"]["Shake Intensity"];
-    
-    if (data["Aimbot"].contains("Stutter"))
-        Options::Aimbot::Stutter = data["Aimbot"]["Stutter"];
-    
-    if (data["Aimbot"].contains("Stutter Ticks"))
-        Options::Aimbot::StutterTicks = data["Aimbot"]["Stutter Ticks"];
+    if (data.contains("Aimbot")) {
+        if (data["Aimbot"].contains("Aimbot Key")) Options::Aimbot::AimbotKey = data["Aimbot"]["Aimbot Key"];
+        if (data["Aimbot"].contains("Aiming Type")) Options::Aimbot::AimingType = data["Aimbot"]["Aiming Type"];
+        if (data["Aimbot"].contains("Toggle Type")) Options::Aimbot::ToggleType = data["Aimbot"]["Toggle Type"];
+        if (data["Aimbot"].contains("Aimbot")) Options::Aimbot::Aimbot = data["Aimbot"]["Aimbot"];
+        if (data["Aimbot"].contains("Team Check")) Options::Aimbot::TeamCheck = data["Aimbot"]["Team Check"];
+        if (data["Aimbot"].contains("Downed Check")) Options::Aimbot::DownedCheck = data["Aimbot"]["Downed Check"];
+        if (data["Aimbot"].contains("Sticky Aim")) Options::Aimbot::StickyAim = data["Aimbot"]["Sticky Aim"];
+        if (data["Aimbot"].contains("Target Bone")) Options::Aimbot::TargetBone = data["Aimbot"]["Target Bone"];
+        if (data["Aimbot"].contains("Air Target Bone")) Options::Aimbot::AirTargetBone = data["Aimbot"]["Air Target Bone"];
+        if (data["Aimbot"].contains("FOV")) Options::Aimbot::FOV = data["Aimbot"]["FOV"];
+        if (data["Aimbot"].contains("Show FOV")) Options::Aimbot::ShowFOV = data["Aimbot"]["Show FOV"];
+        if (data["Aimbot"].contains("Show FOV Fill")) Options::Aimbot::ShowFOVFill = data["Aimbot"]["Show FOV Fill"];
+        if (data["Aimbot"].contains("FOV Color")) {
+            Options::Aimbot::FOVColor[0] = data["Aimbot"]["FOV Color"][0];
+            Options::Aimbot::FOVColor[1] = data["Aimbot"]["FOV Color"][1];
+            Options::Aimbot::FOVColor[2] = data["Aimbot"]["FOV Color"][2];
+        }
+        if (data["Aimbot"].contains("FOV Fill Color")) {
+            Options::Aimbot::FOVFillColor[0] = data["Aimbot"]["FOV Fill Color"][0];
+            Options::Aimbot::FOVFillColor[1] = data["Aimbot"]["FOV Fill Color"][1];
+            Options::Aimbot::FOVFillColor[2] = data["Aimbot"]["FOV Fill Color"][2];
+        }
+        if (data["Aimbot"].contains("FOV Thickness")) Options::Aimbot::FOVThickness = data["Aimbot"]["FOV Thickness"];
+        if (data["Aimbot"].contains("Smoothness")) Options::Aimbot::Smoothness = data["Aimbot"]["Smoothness"];
+        if (data["Aimbot"].contains("Smoothness Curve")) Options::Aimbot::SmoothnessCurve = data["Aimbot"]["Smoothness Curve"];
+        if (data["Aimbot"].contains("Range")) Options::Aimbot::Range = data["Aimbot"]["Range"];
+        if (data["Aimbot"].contains("Prediction")) Options::Aimbot::Prediction = data["Aimbot"]["Prediction"];
+        if (data["Aimbot"].contains("Prediction X")) Options::Aimbot::PredictionX = data["Aimbot"]["Prediction X"];
+        if (data["Aimbot"].contains("Prediction Y")) Options::Aimbot::PredictionY = data["Aimbot"]["Prediction Y"];
+        if (data["Aimbot"].contains("Shake")) Options::Aimbot::Shake = data["Aimbot"]["Shake"];
+        if (data["Aimbot"].contains("Shake Intensity")) Options::Aimbot::ShakeIntensity = data["Aimbot"]["Shake Intensity"];
+        if (data["Aimbot"].contains("Stutter")) Options::Aimbot::Stutter = data["Aimbot"]["Stutter"];
+        if (data["Aimbot"].contains("Stutter Ticks")) Options::Aimbot::StutterTicks = data["Aimbot"]["Stutter Ticks"];
+    }
 
     // Triggerbot Loading
     if (data.contains("Triggerbot"))
     {
-        if (data["Triggerbot"].contains("Triggerbot Key"))
-            Options::Triggerbot::TriggerbotKey = data["Triggerbot"]["Triggerbot Key"];
-        
-        if (data["Triggerbot"].contains("Toggle Type"))
-            Options::Triggerbot::ToggleType = data["Triggerbot"]["Toggle Type"];
-        
-        if (data["Triggerbot"].contains("Enabled"))
-            Options::Triggerbot::Enabled = data["Triggerbot"]["Enabled"];
-        
-        if (data["Triggerbot"].contains("Team Check"))
-            Options::Triggerbot::TeamCheck = data["Triggerbot"]["Team Check"];
-        
-        if (data["Triggerbot"].contains("Downed Check"))
-            Options::Triggerbot::DownedCheck = data["Triggerbot"]["Downed Check"];
-        
-        if (data["Triggerbot"].contains("Radius"))
-            Options::Triggerbot::Radius = data["Triggerbot"]["Radius"];
-        
-        if (data["Triggerbot"].contains("Range"))
-            Options::Triggerbot::Range = data["Triggerbot"]["Range"];
-        
-        if (data["Triggerbot"].contains("Delay"))
-            Options::Triggerbot::Delay = data["Triggerbot"]["Delay"];
+        if (data["Triggerbot"].contains("Triggerbot Key")) Options::Triggerbot::TriggerbotKey = data["Triggerbot"]["Triggerbot Key"];
+        if (data["Triggerbot"].contains("Toggle Type")) Options::Triggerbot::ToggleType = data["Triggerbot"]["Toggle Type"];
+        if (data["Triggerbot"].contains("Enabled")) Options::Triggerbot::Enabled = data["Triggerbot"]["Enabled"];
+        if (data["Triggerbot"].contains("Team Check")) Options::Triggerbot::TeamCheck = data["Triggerbot"]["Team Check"];
+        if (data["Triggerbot"].contains("Downed Check")) Options::Triggerbot::DownedCheck = data["Triggerbot"]["Downed Check"];
+        if (data["Triggerbot"].contains("Radius")) Options::Triggerbot::Radius = data["Triggerbot"]["Radius"];
+        if (data["Triggerbot"].contains("Range")) Options::Triggerbot::Range = data["Triggerbot"]["Range"];
+        if (data["Triggerbot"].contains("Delay")) Options::Triggerbot::Delay = data["Triggerbot"]["Delay"];
     }
 
     // Macro Loading
     if (data.contains("Macro"))
     {
-        if (data["Macro"].contains("Macro Key"))
-            Options::Macro::MacroKey = data["Macro"]["Macro Key"];
-        
-        if (data["Macro"].contains("Toggle Type"))
-            Options::Macro::ToggleType = data["Macro"]["Toggle Type"];
-        
-        if (data["Macro"].contains("Enabled"))
-            Options::Macro::Enabled = data["Macro"]["Enabled"];
-        
-        if (data["Macro"].contains("Delay"))
-            Options::Macro::Delay = data["Macro"]["Delay"];
+        if (data["Macro"].contains("Macro Key")) Options::Macro::MacroKey = data["Macro"]["Macro Key"];
+        if (data["Macro"].contains("Toggle Type")) Options::Macro::ToggleType = data["Macro"]["Toggle Type"];
+        if (data["Macro"].contains("Enabled")) Options::Macro::Enabled = data["Macro"]["Enabled"];
+        if (data["Macro"].contains("Delay")) Options::Macro::Delay = data["Macro"]["Delay"];
     }
 
     // Crosshair Loading
     if (data.contains("Crosshair"))
     {
-        if (data["Crosshair"].contains("Enabled"))
-            Options::Crosshair::Enabled = data["Crosshair"]["Enabled"];
-        
-        if (data["Crosshair"].contains("Style"))
-            Options::Crosshair::Style = data["Crosshair"]["Style"];
-        
-        if (data["Crosshair"].contains("Size"))
-            Options::Crosshair::Size = data["Crosshair"]["Size"];
-        
-        if (data["Crosshair"].contains("Gap"))
-            Options::Crosshair::Gap = data["Crosshair"]["Gap"];
-        
-        if (data["Crosshair"].contains("Thickness"))
-            Options::Crosshair::Thickness = data["Crosshair"]["Thickness"];
-        
-        if (data["Crosshair"].contains("Spin Speed"))
-            Options::Crosshair::SpinSpeed = data["Crosshair"]["Spin Speed"];
-        
-        if (data["Crosshair"].contains("Gap Speed"))
-            Options::Crosshair::GapSpeed = data["Crosshair"]["Gap Speed"];
-        
-        if (data["Crosshair"].contains("Gap Tween"))
-            Options::Crosshair::GapTween = data["Crosshair"]["Gap Tween"];
-        
-        if (data["Crosshair"].contains("Show Text"))
-            Options::Crosshair::ShowText = data["Crosshair"]["Show Text"];
-        
+        if (data["Crosshair"].contains("Enabled")) Options::Crosshair::Enabled = data["Crosshair"]["Enabled"];
+        if (data["Crosshair"].contains("Style")) Options::Crosshair::Style = data["Crosshair"]["Style"];
+        if (data["Crosshair"].contains("Size")) Options::Crosshair::Size = data["Crosshair"]["Size"];
+        if (data["Crosshair"].contains("Gap")) Options::Crosshair::Gap = data["Crosshair"]["Gap"];
+        if (data["Crosshair"].contains("Thickness")) Options::Crosshair::Thickness = data["Crosshair"]["Thickness"];
+        if (data["Crosshair"].contains("Spin Speed")) Options::Crosshair::SpinSpeed = data["Crosshair"]["Spin Speed"];
+        if (data["Crosshair"].contains("Gap Speed")) Options::Crosshair::GapSpeed = data["Crosshair"]["Gap Speed"];
+        if (data["Crosshair"].contains("Gap Tween")) Options::Crosshair::GapTween = data["Crosshair"]["Gap Tween"];
+        if (data["Crosshair"].contains("Show Text")) Options::Crosshair::ShowText = data["Crosshair"]["Show Text"];
         if (data["Crosshair"].contains("Color"))
         {
             Options::Crosshair::Color[0] = data["Crosshair"]["Color"][0];
@@ -352,27 +296,13 @@ inline void LoadConfig(std::string configName)
     }
 
     // Misc Loading
-
-    if (data["Misc"].contains("Bypass"))
-        Options::Misc::Bypass = data["Misc"]["Bypass"];
-    
-    Options::Misc::FOV = data["Misc"]["FOV"];
-    
-    if (data["Misc"].contains("Cache NPCs"))
-        Options::Misc::CacheNPCs = data["Misc"]["Cache NPCs"];
-    
-    if (data["Misc"].contains("Keybind List"))
-        Options::Misc::KeybindList = data["Misc"]["Keybind List"];
-    
-    if (data["Misc"].contains("Keybind List X"))
-        Options::Misc::KeybindListX = data["Misc"]["Keybind List X"];
-    
-    if (data["Misc"].contains("Keybind List Y"))
-        Options::Misc::KeybindListY = data["Misc"]["Keybind List Y"];
-    
-    if (data["Misc"].contains("Stream Proof"))
-        Options::Misc::StreamProof = data["Misc"]["Stream Proof"];
-    
+    if (data["Misc"].contains("Bypass")) Options::Misc::Bypass = data["Misc"]["Bypass"];
+    if (data["Misc"].contains("FOV")) Options::Misc::FOV = data["Misc"]["FOV"];
+    if (data["Misc"].contains("Cache NPCs")) Options::Misc::CacheNPCs = data["Misc"]["Cache NPCs"];
+    if (data["Misc"].contains("Keybind List")) Options::Misc::KeybindList = data["Misc"]["Keybind List"];
+    if (data["Misc"].contains("Keybind List X")) Options::Misc::KeybindListX = data["Misc"]["Keybind List X"];
+    if (data["Misc"].contains("Keybind List Y")) Options::Misc::KeybindListY = data["Misc"]["Keybind List Y"];
+    if (data["Misc"].contains("Stream Proof")) Options::Misc::StreamProof = data["Misc"]["Stream Proof"];
     if (data["Misc"].contains("Menu Accent Color"))
     {
         Options::Misc::MenuAccentColor[0] = data["Misc"]["Menu Accent Color"][0];
@@ -383,54 +313,30 @@ inline void LoadConfig(std::string configName)
     // Hitbox Expander Loading
     if (data.contains("HitboxExpander"))
     {
-        if (data["HitboxExpander"].contains("Enabled"))
-            Options::HitboxExpander::Enabled = data["HitboxExpander"]["Enabled"];
-        
-        if (data["HitboxExpander"].contains("Horizontal Size"))
-            Options::HitboxExpander::HorizontalSize = data["HitboxExpander"]["Horizontal Size"];
-        
-        if (data["HitboxExpander"].contains("Vertical Size"))
-            Options::HitboxExpander::VerticalSize = data["HitboxExpander"]["Vertical Size"];
-        
-        if (data["HitboxExpander"].contains("Show Hitbox"))
-            Options::HitboxExpander::ShowHitbox = data["HitboxExpander"]["Show Hitbox"];
-        
-        if (data["HitboxExpander"].contains("Transparency"))
-            Options::HitboxExpander::HitboxTransparency = data["HitboxExpander"]["Transparency"];
-        
-        if (data["HitboxExpander"].contains("Walk Through"))
-            Options::HitboxExpander::WalkThrough = data["HitboxExpander"]["Walk Through"];
+        if (data["HitboxExpander"].contains("Enabled")) Options::HitboxExpander::Enabled = data["HitboxExpander"]["Enabled"];
+        if (data["HitboxExpander"].contains("Horizontal Size")) Options::HitboxExpander::HorizontalSize = data["HitboxExpander"]["Horizontal Size"];
+        if (data["HitboxExpander"].contains("Vertical Size")) Options::HitboxExpander::VerticalSize = data["HitboxExpander"]["Vertical Size"];
+        if (data["HitboxExpander"].contains("Show Hitbox")) Options::HitboxExpander::ShowHitbox = data["HitboxExpander"]["Show Hitbox"];
+        if (data["HitboxExpander"].contains("Transparency")) Options::HitboxExpander::HitboxTransparency = data["HitboxExpander"]["Transparency"];
+        if (data["HitboxExpander"].contains("Walk Through")) Options::HitboxExpander::WalkThrough = data["HitboxExpander"]["Walk Through"];
     }
 
     // Fly Loading
     if (data.contains("Fly"))
     {
-        if (data["Fly"].contains("Fly Key"))
-            Options::Fly::FlyKey = data["Fly"]["Fly Key"];
-        
-        if (data["Fly"].contains("Toggle Type"))
-            Options::Fly::ToggleType = data["Fly"]["Toggle Type"];
-        
-        if (data["Fly"].contains("Enabled"))
-            Options::Fly::Enabled = data["Fly"]["Enabled"];
-        
-        if (data["Fly"].contains("Speed"))
-            Options::Fly::Speed = data["Fly"]["Speed"];
+        if (data["Fly"].contains("Fly Key")) Options::Fly::FlyKey = data["Fly"]["Fly Key"];
+        if (data["Fly"].contains("Toggle Type")) Options::Fly::ToggleType = data["Fly"]["Toggle Type"];
+        if (data["Fly"].contains("Enabled")) Options::Fly::Enabled = data["Fly"]["Enabled"];
+        if (data["Fly"].contains("Speed")) Options::Fly::Speed = data["Fly"]["Speed"];
     }
 
     // WalkSpeed Loading
     if (data.contains("WalkSpeed"))
     {
-        if (data["WalkSpeed"].contains("WalkSpeed Key"))
-            Options::WalkSpeed::WalkSpeedKey = data["WalkSpeed"]["WalkSpeed Key"];
-        
-        if (data["WalkSpeed"].contains("Toggle Type"))
-            Options::WalkSpeed::ToggleType = data["WalkSpeed"]["Toggle Type"];
-        
-        if (data["WalkSpeed"].contains("Enabled"))
-            Options::WalkSpeed::Enabled = data["WalkSpeed"]["Enabled"];
-        
-        if (data["WalkSpeed"].contains("Speed"))
-            Options::WalkSpeed::Speed = data["WalkSpeed"]["Speed"];
+        if (data["WalkSpeed"].contains("WalkSpeed Key")) Options::WalkSpeed::WalkSpeedKey = data["WalkSpeed"]["WalkSpeed Key"];
+        if (data["WalkSpeed"].contains("Toggle Type")) Options::WalkSpeed::ToggleType = data["WalkSpeed"]["Toggle Type"];
+        if (data["WalkSpeed"].contains("Enabled")) Options::WalkSpeed::Enabled = data["WalkSpeed"]["Enabled"];
+        if (data["WalkSpeed"].contains("Speed")) Options::WalkSpeed::Speed = data["WalkSpeed"]["Speed"];
     }
+    } catch (...) {}
 }
