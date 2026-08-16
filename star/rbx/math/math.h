@@ -2,15 +2,30 @@
 #include <algorithm>
 #include <cmath>
 
-// Fallback clamp implementation for older C++ standards
-#ifndef __cpp_lib_clamp
-namespace std {
+// Clamp helper - use std::clamp if available (C++17), otherwise fallback
+// Avoid redefining std::clamp which is UB; provide custom fallback instead
+#if __cplusplus < 201703L || !defined(__cpp_lib_clamp)
+namespace detail {
     template<typename T>
-    constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
+    constexpr const T& clamp_fallback(const T& v, const T& lo, const T& hi) {
         return (v < lo) ? lo : (hi < v) ? hi : v;
     }
 }
+#else
+namespace detail {
+    using std::clamp;
+    // alias for uniformity
+    template<typename T>
+    constexpr const T& clamp_fallback(const T& v, const T& lo, const T& hi) {
+        return std::clamp(v, lo, hi);
+    }
+}
 #endif
+// Provide global helper to avoid ADL issues
+template<typename T>
+constexpr const T& custom_clamp(const T& v, const T& lo, const T& hi) {
+    return detail::clamp_fallback(v, lo, hi);
+}
 
 namespace Matrixes
 {

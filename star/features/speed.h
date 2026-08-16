@@ -59,15 +59,12 @@ void SpeedLoop()
             Vectors::Vector3 moveDir = Memory->read<Vectors::Vector3>(humanoid.address + Offsets::Humanoid::MoveDirection);
             Vectors::Vector3 currentVelocity = Memory->read<Vectors::Vector3>(primitive + Offsets::Primitive::AssemblyLinearVelocity);
 
-            for (int i = 0; i < 10000; i++)
-            {
-                Vectors::Vector3 newVelocity(
-                    moveDir.x * Options::WalkSpeed::Speed,
-                    currentVelocity.y,
-                    moveDir.z * Options::WalkSpeed::Speed
-                );
-                Memory->write<Vectors::Vector3>(primitive + Offsets::Primitive::AssemblyLinearVelocity, newVelocity);
-            }
+            Vectors::Vector3 newVelocity(
+                moveDir.x * Options::WalkSpeed::Speed,
+                currentVelocity.y,
+                moveDir.z * Options::WalkSpeed::Speed
+            );
+            Memory->write<Vectors::Vector3>(primitive + Offsets::Primitive::AssemblyLinearVelocity, newVelocity);
         }
         catch (...)
         {

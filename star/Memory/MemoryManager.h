@@ -26,10 +26,10 @@ Luck_WriteVirtualMemory
 
 class MemoryManager final {
 private:
-	HANDLE processHandle;
+	HANDLE processHandle = nullptr;
 
-	int32_t processId;
-	uintptr_t baseAddress;
+	int32_t processId = 0;
+	uintptr_t baseAddress = 0;
 public:
 	MemoryManager() = default;
 	~MemoryManager() = default;
@@ -58,14 +58,16 @@ public:
 template <typename T>
 T MemoryManager::read(uintptr_t address) {
 	T buffer{};
-
+	if (!processHandle || address == 0)
+		return buffer;
 	Luck_ReadVirtualMemory(processHandle, reinterpret_cast<void*>(address), &buffer, sizeof(T), nullptr);
-
 	return buffer;
 }
 
 template <typename T>
 void MemoryManager::write(uintptr_t address, T value) {
+	if (!processHandle || address == 0)
+		return;
 	Luck_WriteVirtualMemory(processHandle, reinterpret_cast<void*>(address), &value, sizeof(T), nullptr);
 }
 

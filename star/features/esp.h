@@ -7,8 +7,16 @@
 #include <algorithm>
 #include <vector>
 
+inline bool IsValidScreenPos(const Vectors::Vector2& pos) {
+    return pos.x != -1 && pos.y != -1;
+}
+inline bool IsValidScreenPos(const ImVec2& pos) {
+    return pos.x != -1 && pos.y != -1;
+}
+
 inline void RenderESP(ImDrawList* drawList)
 {
+    if (!Globals::Roblox::VisualEngine || !Globals::Roblox::Camera.address || !drawList) return;
     auto localTeam = Globals::Roblox::LocalPlayer.Team();
     auto cameraPos = Memory->read<Vectors::Vector3>(Globals::Roblox::Camera.address + Offsets::Camera::Position);
     auto localCharacter = Globals::Roblox::LocalPlayer.Character();
@@ -16,10 +24,18 @@ inline void RenderESP(ImDrawList* drawList)
     auto localTorso = localCharacter.FindFirstChild("Torso");
     if (localTorso.address == 0)
         localTorso = localCharacter.FindFirstChild("UpperTorso");
-    auto localHeadPos = localHead.Position();
-    auto localTorsoPos = localTorso.Position();
-    auto localTorsoPos2D = WorldToScreen(localTorsoPos);
+    Vectors::Vector3 localHeadPos{0,0,0};
+    Vectors::Vector3 localTorsoPos{0,0,0};
+    Vectors::Vector2 localTorsoPos2D{-1,-1};
+    if (localHead.address) localHeadPos = localHead.Position();
+    if (localTorso.address) {
+        localTorsoPos = localTorso.Position();
+        localTorsoPos2D = WorldToScreen(localTorsoPos);
+    }
     auto Dimensions = Memory->read<Vectors::Vector2>(Globals::Roblox::VisualEngine + Offsets::VisualEngine::Dimensions);
+    if (Dimensions.x <= 0 || Dimensions.y <= 0) {
+        Dimensions = { (float)GetSystemMetrics(SM_CXSCREEN), (float)GetSystemMetrics(SM_CYSCREEN) };
+    }
 
     ImFont* font = ImGui::GetFont();
 
@@ -60,12 +76,13 @@ inline void RenderESP(ImDrawList* drawList)
             leftArm = player.Left_Hand;
         }
 
+        if (!head.address || !torso.address) continue;
         auto head3D = head.Position();
         auto torso3D = torso.Position();
-        auto rLeg3D = rightLeg.Position();
-        auto lLeg3D = leftLeg.Position();
-        auto rArm3D = rightArm.Position();
-        auto lArm3D = leftArm.Position();
+        auto rLeg3D = rightLeg.address ? rightLeg.Position() : torso3D;
+        auto lLeg3D = leftLeg.address ? leftLeg.Position() : torso3D;
+        auto rArm3D = rightArm.address ? rightArm.Position() : torso3D;
+        auto lArm3D = leftArm.address ? leftArm.Position() : torso3D;
 
         auto head2D = WorldToScreen(head3D);
         auto torso2D = WorldToScreen(torso3D);
@@ -74,7 +91,7 @@ inline void RenderESP(ImDrawList* drawList)
         auto rArm2D = WorldToScreen(rArm3D);
         auto lArm2D = WorldToScreen(lArm3D);
 
-        if (torso2D.x == -1 || torso2D.y == -1)
+        if (!IsValidScreenPos(torso2D) || !IsValidScreenPos(head2D))
             continue;
 
         float distance = (localHeadPos - head3D).Magnitude();
@@ -172,34 +189,41 @@ inline void RenderESP(ImDrawList* drawList)
 
         if (Options::ESP::Tracers)
         {
-            float tracerThickness = Options::ESP::TracerThickness;
-            float outlineThickness = tracerThickness + 1.5f;
+            if (!IsValidScreenPos(head2D)) {
+                // skip tracer if head not visible
+            } else {
+                float tracerThickness = Options::ESP::TracerThickness;
+                float outlineThickness = tracerThickness + 1.5f;
 
-            switch (Options::ESP::TracersStart)
-            {
-            case 0: // Bottom
-                if (!Options::ESP::RemoveBorders)
-                    drawList->AddLine(ImVec2(Dimensions.x / 2, Dimensions.y), ImVec2(head2D.x, head2D.y), IM_COL32(0, 0, 0, 255), outlineThickness);
-                drawList->AddLine(ImVec2(Dimensions.x / 2, Dimensions.y), ImVec2(head2D.x, head2D.y), tracerColor, tracerThickness);
-                break;
-            case 1: // Top
-                if (!Options::ESP::RemoveBorders)
-                    drawList->AddLine(ImVec2(Dimensions.x / 2, 0), ImVec2(head2D.x, head2D.y), IM_COL32(0, 0, 0, 255), outlineThickness);
-                drawList->AddLine(ImVec2(Dimensions.x / 2, 0), ImVec2(head2D.x, head2D.y), tracerColor, tracerThickness);
-                break;
-            case 2: // Mouse
-                POINT point;
-                GetCursorPos(&point);
-
-                if (!Options::ESP::RemoveBorders)
-                    drawList->AddLine(ImVec2(point.x, point.y), ImVec2(head2D.x, head2D.y), IM_COL32(0, 0, 0, 255), outlineThickness);
-                drawList->AddLine(ImVec2(point.x, point.y), ImVec2(head2D.x, head2D.y), tracerColor, tracerThickness);
-                break;
-            case 3: // Torso
-                if (!Options::ESP::RemoveBorders)
-                    drawList->AddLine(ImVec2(localTorsoPos2D.x, localTorsoPos2D.y), ImVec2(head2D.x, head2D.y), IM_COL32(0, 0, 0, 255), outlineThickness);
-                drawList->AddLine(ImVec2(localTorsoPos2D.x, localTorsoPos2D.y), ImVec2(head2D.x, head2D.y), tracerColor, tracerThickness);
-                break;
+                switch (Options::ESP::TracersStart)
+                {
+                case 0: // Bottom
+                    if (!Options::ESP::RemoveBorders)
+                        drawList->AddLine(ImVec2(Dimensions.x / 2, Dimensions.y), ImVec2(head2D.x, head2D.y), IM_COL32(0, 0, 0, 255), outlineThickness);
+                    drawList->AddLine(ImVec2(Dimensions.x / 2, Dimensions.y), ImVec2(head2D.x, head2D.y), tracerColor, tracerThickness);
+                    break;
+                case 1: // Top
+                    if (!Options::ESP::RemoveBorders)
+                        drawList->AddLine(ImVec2(Dimensions.x / 2, 0), ImVec2(head2D.x, head2D.y), IM_COL32(0, 0, 0, 255), outlineThickness);
+                    drawList->AddLine(ImVec2(Dimensions.x / 2, 0), ImVec2(head2D.x, head2D.y), tracerColor, tracerThickness);
+                    break;
+                case 2: // Mouse
+                    {
+                        POINT point;
+                        GetCursorPos(&point);
+                        if (!Options::ESP::RemoveBorders)
+                            drawList->AddLine(ImVec2((float)point.x, (float)point.y), ImVec2(head2D.x, head2D.y), IM_COL32(0, 0, 0, 255), outlineThickness);
+                        drawList->AddLine(ImVec2((float)point.x, (float)point.y), ImVec2(head2D.x, head2D.y), tracerColor, tracerThickness);
+                    }
+                    break;
+                case 3: // Torso
+                    if (IsValidScreenPos(localTorsoPos2D)) {
+                        if (!Options::ESP::RemoveBorders)
+                            drawList->AddLine(ImVec2(localTorsoPos2D.x, localTorsoPos2D.y), ImVec2(head2D.x, head2D.y), IM_COL32(0, 0, 0, 255), outlineThickness);
+                        drawList->AddLine(ImVec2(localTorsoPos2D.x, localTorsoPos2D.y), ImVec2(head2D.x, head2D.y), tracerColor, tracerThickness);
+                    }
+                    break;
+                }
             }
         }
 
