@@ -437,11 +437,8 @@ inline void RenderAimbotFOV(ImDrawList* drawList)
     POINT p;
     GetCursorPos(&p);
 
-    HWND robloxWindow = FindWindowA("Roblox", nullptr);
-    if (robloxWindow)
-    {
-        ScreenToClient(robloxWindow, &p);
-    }
+    // NOTE: p stays in screen coordinates to match WorldToScreen(),
+    // which returns screen-space positions (it adds the client origin).
 
     ImColor FOVColor = IM_COL32(
         static_cast<int>(Options::Aimbot::FOVColor[0] * 255.f),
@@ -485,26 +482,29 @@ inline void RunAimbot(ImDrawList* drawList)
     POINT p;
     GetCursorPos(&p);
 
-    HWND robloxWindow = FindWindowA("Roblox", nullptr);
+    // Compute the game window's screen-space center. WorldToScreen() returns
+    // screen coordinates, so the cursor must stay in screen space here too.
+    float centerX = Dimensions.x / 2.0f;
+    float centerY = Dimensions.y / 2.0f;
+    HWND robloxWindow = FindWindowA(nullptr, "Roblox");
     if (robloxWindow)
     {
-        ScreenToClient(robloxWindow, &p);
+        POINT origin{ 0, 0 };
+        if (ClientToScreen(robloxWindow, &origin))
+        {
+            centerX += origin.x;
+            centerY += origin.y;
+        }
     }
 
     int CombatType;
-    
-    bool yAxisCheck;
 
-    if (Dimensions.x < GetSystemMetrics(SM_CXSCREEN) || Dimensions.y < GetSystemMetrics(SM_CYSCREEN))
-    {
-        yAxisCheck = (p.y - Dimensions.y / 2) <= 25; // windowed mode
-    }
-    else
-    {
-        yAxisCheck = p.y == Dimensions.y / 2;
-    }
+    // FPS mode keeps the cursor locked near the center of the viewport.
+    const float centerTolerance = 25.0f;
+    bool yAxisCheck = (std::abs(p.y - centerY) <= centerTolerance);
+    bool xAxisCheck = (std::abs(p.x - centerX) <= centerTolerance);
 
-    if (p.x == Dimensions.x / 2 && yAxisCheck)
+    if (xAxisCheck && yAxisCheck)
     {                                          //likely in first person
         CombatType = 0; // FPS
     }
