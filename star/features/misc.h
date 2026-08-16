@@ -7,12 +7,9 @@
 
 inline void MiscLoop()
 {
-	static auto character = Globals::Roblox::LocalPlayer.Character();
-	static auto humanoid = character.FindFirstChildWhichIsA("Humanoid");
 	while (true)
 	{
-		character = Globals::Roblox::LocalPlayer.Character();
-		humanoid = character.FindFirstChildWhichIsA("Humanoid");
+		auto character = Globals::Roblox::LocalPlayer.Character();
 		
 		// Camera FOV
 		if (Options::Misc::FOVEnabled)

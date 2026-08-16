@@ -118,6 +118,14 @@ inline Vectors::Vector3 GetTargetPosition(const RobloxPlayer& player)
             basePos = player.Head.Position();
             break;
     }
+
+    // Fallback: if the selected bone is missing (0), aim at the head instead
+    // of returning the world origin {0,0,0}
+    if (!targetPart.address)
+    {
+        targetPart = player.Head;
+        basePos = player.Head.Position();
+    }
     
     // Apply prediction if enabled (guard against division by zero)
     if (Options::Aimbot::Prediction && targetPart.address != 0)
@@ -152,6 +160,10 @@ inline RobloxPlayer GetClosestPlayer()
     auto localCharacter = Globals::Roblox::LocalPlayer.Character();
     auto localHRP = localCharacter.FindFirstChild("HumanoidRootPart");
 
+    // No character / no HumanoidRootPart -> can't measure distances
+    if (!localHRP.address)
+        return target;
+
     POINT p;
     GetCursorPos(&p);
 
@@ -169,7 +181,9 @@ inline RobloxPlayer GetClosestPlayer()
         if (player.address == Globals::Roblox::LocalPlayer.address)
             continue;
 
-        if (player.Team.address == localTeam.address && Options::Aimbot::TeamCheck)
+        // Only skip teammates when the local player actually has a team
+        // (addresses are both 0 in games without teams -> never skip there)
+        if (Options::Aimbot::TeamCheck && localTeam.address != 0 && player.Team.address == localTeam.address)
             continue;
 
         if (player.Health == 0)
@@ -275,6 +289,9 @@ inline float ApplySmoothnessCurve(float smoothness, int curveType)
 
 inline void CameraRotation(const RobloxPlayer& target)
 {
+    if (!Globals::Roblox::Camera.address)
+        return;
+
     Matrixes::Matrix3x3 currentRotation = Memory->read<Matrixes::Matrix3x3>(Globals::Roblox::Camera.address + Offsets::Camera::Rotation);
 
     sCFrame cameraCFrame = Globals::Roblox::Camera.CFrame();
@@ -469,6 +486,9 @@ inline void RunAimbot(ImDrawList* drawList)
     auto localCharacter = Globals::Roblox::LocalPlayer.Character();
     auto localHRP = localCharacter.FindFirstChild("HumanoidRootPart");
     auto Dimensions = Memory->read<Vectors::Vector2>(Globals::Roblox::VisualEngine + Offsets::VisualEngine::Dimensions);
+    if (Dimensions.x <= 0 || Dimensions.y <= 0) {
+        Dimensions = { (float)GetSystemMetrics(SM_CXSCREEN), (float)GetSystemMetrics(SM_CYSCREEN) };
+    }
 
     std::vector<RobloxPlayer> currentPlayers;
 	{
@@ -477,6 +497,9 @@ inline void RunAimbot(ImDrawList* drawList)
 	}
 
 	if (currentPlayers.empty())
+        return;
+
+    if (!localHRP.address)
         return;
 
     POINT p;
@@ -565,8 +588,8 @@ inline void RunAimbot(ImDrawList* drawList)
     {
         if (Options::Aimbot::CurrentTarget.address == 0 ||
             Options::Aimbot::CurrentTarget.Health == 0 ||
-            (Options::Aimbot::CurrentTarget.Health <= 1 && Options::Aimbot::DownedCheck) ||
-            (Options::Aimbot::CurrentTarget.Team.address == localTeam.address && Options::Aimbot::TeamCheck))
+            (Options::Aimbot::CurrentTarget.Health <= 5.0f && Options::Aimbot::DownedCheck) ||
+            (Options::Aimbot::TeamCheck && localTeam.address != 0 && Options::Aimbot::CurrentTarget.Team.address == localTeam.address))
         {
             Options::Aimbot::CurrentTarget = GetClosestPlayer();
         }
@@ -574,12 +597,15 @@ inline void RunAimbot(ImDrawList* drawList)
         {
             // Check if current target is still within range
             auto targetPos = GetTargetPosition(Options::Aimbot::CurrentTarget);
-            Vectors::Vector3 diff = targetPos - localHRP.Position();
-            float distance3D = diff.Magnitude();
-            
-            if (distance3D > Options::Aimbot::Range)
+            if (localHRP.address != 0)
             {
-                Options::Aimbot::CurrentTarget = GetClosestPlayer();
+                Vectors::Vector3 diff = targetPos - localHRP.Position();
+                float distance3D = diff.Magnitude();
+
+                if (distance3D > Options::Aimbot::Range)
+                {
+                    Options::Aimbot::CurrentTarget = GetClosestPlayer();
+                }
             }
         }
 

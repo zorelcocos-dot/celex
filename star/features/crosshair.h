@@ -30,11 +30,11 @@ inline void RenderCrosshair(ImDrawList* drawList)
         lastStyle = Options::Crosshair::Style;
     }
 
-    float targetSpeed = Options::Crosshair::SpinSpeed * 0.5f;
+    float targetSpeed = 0.0f;
     switch (Options::Crosshair::Style) {
-    case 0: // Static
-        targetSpeed = Options::Crosshair::SpinSpeed * 0.5f;
+    case 0: // Static - no rotation
         fadeParam = 0.0f;
+        targetSpeed = 0.0f;
         break;
     case 1: // Pulse
         fadeParam = std::clamp(fadeParam + dt / 2.0f, 0.0f, 1.0f);

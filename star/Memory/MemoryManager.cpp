@@ -95,9 +95,19 @@ std::string MemoryManager::readString(uintptr_t address) {
 	std::string result;
 	result.reserve(32);
 
-	int32_t StrLength = read<int32_t>(address + 0x18);
-	// Validate length to avoid absurd allocations / loops
-	if (StrLength < 0 || StrLength > 2048)
+	// MSVC std::string layout (x64):
+	//   +0x00 : union { char _Buf[16]; char* _Ptr; }
+	//   +0x10 : size_t _Mysize  (actual string length)
+	//   +0x18 : size_t _Myres   (capacity)
+	// Reading the length from +0x18 (capacity) instead of +0x10 (size) makes
+	// heap strings (>15 chars, e.g. "HumanoidRootPart") include trailing
+	// garbage and breaks exact-name lookups. See Offsets::Misc::StringLength.
+	int32_t StrLength = read<int32_t>(address + 0x10);
+	int32_t StrCapacity = read<int32_t>(address + 0x18);
+	// Validate length/capacity to avoid absurd allocations / loops
+	if (StrLength < 0 || StrLength > 2048 || StrCapacity < 0 || StrCapacity > 2048)
+		return "";
+	if (StrLength > StrCapacity)
 		return "";
 
 	uintptr_t strAddress = address;

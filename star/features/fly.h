@@ -53,7 +53,10 @@ void FlyLoop()
                 continue;
 
             auto cameraMatrix = camera.CFrame();
-            Vectors::Vector3 forward = Vectors::Vector3(cameraMatrix.r02, cameraMatrix.r12, cameraMatrix.r22);
+            // Roblox look vector is the NEGATED Z row of the CFrame matrix:
+            //   LookVector = (-r02, -r12, -r22)
+            // Using the raw row makes W fly backwards and S fly forwards.
+            Vectors::Vector3 forward = Vectors::Vector3(-cameraMatrix.r02, -cameraMatrix.r12, -cameraMatrix.r22);
             Vectors::Vector3 up = Vectors::Vector3(0, 1, 0);
 
             // Get primitive address for velocity
