@@ -610,12 +610,13 @@ void ShowImgui() {
                 ImGui::BeginGroup();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.48f);
 
-                BeginApplePanel("Utility", 340);
+                BeginApplePanel("Utility", 380);
                 AppleToggle("Show FOV", "Render aimbot FOV circle", &Options::Aimbot::ShowFOV);
                 AppleToggle("Crosshair", "Custom crosshair", &Options::Crosshair::Enabled);
                 AppleToggle("Stream Proof", "Hide overlay from capture", &Options::Misc::StreamProof);
                 AppleToggle("Keybind List", "Show active keybinds", &Options::Misc::KeybindList);
                 AppleBind("Menu Key", &Options::Misc::MenuKey);
+                AppleToggle("Cache NPCs", "Cache NPC entities", &Options::Misc::CacheNPCs);
                 AppleToggle("Custom FOV", "Override camera FOV", &Options::Misc::FOVEnabled);
                 if (Options::Misc::FOVEnabled)
                     AppleSlider("FOV", &Options::Misc::FOV, 20.0f, 120.0f, "%.0f");
