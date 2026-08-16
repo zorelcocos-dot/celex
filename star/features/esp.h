@@ -53,7 +53,9 @@ inline void RenderESP(ImDrawList* drawList)
         if (player.address == Globals::Roblox::LocalPlayer.address)
             continue;
 
-        if (Options::ESP::TeamCheck && player.Team.address == localTeam.address)
+        // Only skip teammates when the local player actually has a team
+        // (addresses are both 0 in games without teams -> never skip there)
+        if (Options::ESP::TeamCheck && localTeam.address != 0 && player.Team.address == localTeam.address)
             continue;
 
         if (player.Health <= 0)
@@ -104,8 +106,7 @@ inline void RenderESP(ImDrawList* drawList)
         auto newHeadPos = WorldToScreen(head3D + Vectors::Vector3{ 0.f, 0.8f, 0.f });
         auto newHeadName = WorldToScreen(head3D + Vectors::Vector3{ 0.f, 2.2f, 0.f });
         auto newLeftLeg = WorldToScreen(lLeg3D - Vectors::Vector3{ 0.f, 1.f, 0.f });
-        auto newRightLeg = WorldToScreen(rLeg3D - Vectors::Vector3{ 2.5f, 0.0f, 0.f });
-        auto newHeadPosHealth = WorldToScreen(head3D - Vectors::Vector3{ 2.f, 0.f, 0.f });
+        auto newRightLeg = WorldToScreen(rLeg3D - Vectors::Vector3{ 0.f, 1.f, 0.f });
 
         auto hrpCFrame = player.HumanoidRootPart.CFrame();
         Vectors::Vector3 rightVector = hrpCFrame.GetRightVector();
@@ -313,6 +314,11 @@ inline void RenderESP(ImDrawList* drawList)
         float fontSize = (12.f * scale > 10.0f) ? 12.f * scale : 10.0f;
         if (Options::ESP::Name)
         {
+            if (!IsValidScreenPos(newHeadName))
+            {
+                // Projection went behind the camera - fall back to head position
+                newHeadName = head2D;
+            }
 
             const std::string& nameStr = player.Name;
             ImVec2 textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.f, nameStr.c_str());
@@ -331,7 +337,8 @@ inline void RenderESP(ImDrawList* drawList)
             std::string distStr = std::to_string(roundedDistance) + " studs";
             ImVec2 textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.f, distStr.c_str());
 
-            ImVec2 distPos(head2D.x - textSize.x / 2.0f, newLeftLeg.y);
+            float distY = IsValidScreenPos(newLeftLeg) ? newLeftLeg.y : torso2D.y;
+            ImVec2 distPos(head2D.x - textSize.x / 2.0f, distY);
             
             // Draw clean shadow
             drawList->AddText(font, fontSize, ImVec2(distPos.x + 1.0f, distPos.y + 1.0f), IM_COL32(0, 0, 0, 255), distStr.c_str());
@@ -342,23 +349,27 @@ inline void RenderESP(ImDrawList* drawList)
 
         if (Options::ESP::Health)
         {
-            float healthPercent = std::clamp(player.Health / player.MaxHealth, 0.f, 1.f);
+            // Guard against division by zero (NaN bar) when MaxHealth is invalid
+            if (player.MaxHealth > 0.0f)
+            {
+                float healthPercent = std::clamp(player.Health / player.MaxHealth, 0.f, 1.f);
 
-            float barWidth = std::clamp(scale * 4.f, 2.f, 6.f);
-            float boxHeight = bottom - top;
+                float barWidth = std::clamp(scale * 4.f, 2.f, 6.f);
+                float boxHeight = bottom - top;
 
-            ImVec2 barTopLeft(left - barWidth - 2.f, top);
-            ImVec2 barBottomRight(left - 2.f, top + boxHeight);
+                ImVec2 barTopLeft(left - barWidth - 2.f, top);
+                ImVec2 barBottomRight(left - 2.f, top + boxHeight);
 
-            drawList->AddRectFilled(barTopLeft, barBottomRight, IM_COL32(50, 50, 50, 180));
+                drawList->AddRectFilled(barTopLeft, barBottomRight, IM_COL32(50, 50, 50, 180));
 
-            float filledHeight = boxHeight * healthPercent;
-            ImVec2 filledTopLeft(barTopLeft.x, barBottomRight.y - filledHeight);
-            ImVec2 filledBottomRight(barBottomRight.x, barBottomRight.y);
+                float filledHeight = boxHeight * healthPercent;
+                ImVec2 filledTopLeft(barTopLeft.x, barBottomRight.y - filledHeight);
+                ImVec2 filledBottomRight(barBottomRight.x, barBottomRight.y);
 
-            drawList->AddRectFilled(filledTopLeft, filledBottomRight, IM_COL32(0, 255, 0, 220));
+                drawList->AddRectFilled(filledTopLeft, filledBottomRight, IM_COL32(0, 255, 0, 220));
 
-            drawList->AddRect(barTopLeft, barBottomRight, IM_COL32(0, 0, 0, 255));
+                drawList->AddRect(barTopLeft, barBottomRight, IM_COL32(0, 0, 0, 255));
+            }
         }
 
         if (Options::ESP::BoxType == 2) // 3D Box
@@ -378,7 +389,9 @@ inline void RenderESP(ImDrawList* drawList)
 
             auto head = player.Head;
             auto leftLeg = (player.RigType == 0) ? player.Left_Leg : player.Left_Foot;
-            
+            if (!leftLeg.address)
+                continue;
+
             Vectors::Vector3 headPos = head.Position();
             Vectors::Vector3 legPos = leftLeg.Position();
             

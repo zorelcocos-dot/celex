@@ -1,6 +1,9 @@
 #include "renderer.h"
 #include "imgui/IconsFontAwesome6.h"
+// ImLerp/ImClamp helpers used by the menu live in imgui_internal.h
+#include "imgui/imgui_internal.h"
 #include "../rbx/globals/globals.h"
+#include "../rbx/configs/configs.h"
 #include <map>
 #include <string>
 ID3D11Device* g_pd3dDevice = nullptr;
@@ -148,6 +151,7 @@ void ShowImgui() {
     }
     if (!CreateDeviceD3D(hwnd)) {
         CleanupDeviceD3D();
+        ::DestroyWindow(hwnd);
         ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
         return;
     }
@@ -578,12 +582,15 @@ void ShowImgui() {
                 ImGui::BeginGroup();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.48f);
 
-                BeginApplePanel("ESP Targets", 280);
+                BeginApplePanel("ESP Targets", 400);
                 AppleToggle("Names", "Show player names", &Options::ESP::Name);
                 AppleToggle("Distance", "Show distance to player", &Options::ESP::Distance);
                 AppleToggle("Health", "Show player health", &Options::ESP::Health);
                 AppleToggle("Tracers", "Draw lines to players", &Options::ESP::Tracers);
                 AppleToggle("Teamcheck", "Hide teammates", &Options::ESP::TeamCheck);
+                AppleToggle("Skeleton", "Draw player skeleton", &Options::ESP::Skeleton);
+                AppleToggle("Head Circle", "Draw circle on heads", &Options::ESP::HeadCircle);
+                AppleToggle("Headless", "Hide your own head", &Options::ESP::Headless);
                 EndApplePanel();
                 ImGui::PopItemWidth();
                 ImGui::EndGroup();
@@ -603,12 +610,38 @@ void ShowImgui() {
                 ImGui::BeginGroup();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.48f);
 
-                BeginApplePanel("Utility", 240);
+                BeginApplePanel("Utility", 380);
                 AppleToggle("Show FOV", "Render aimbot FOV circle", &Options::Aimbot::ShowFOV);
                 AppleToggle("Crosshair", "Custom crosshair", &Options::Crosshair::Enabled);
                 AppleToggle("Stream Proof", "Hide overlay from capture", &Options::Misc::StreamProof);
                 AppleToggle("Keybind List", "Show active keybinds", &Options::Misc::KeybindList);
                 AppleBind("Menu Key", &Options::Misc::MenuKey);
+                AppleToggle("Cache NPCs", "Cache NPC entities", &Options::Misc::CacheNPCs);
+                AppleToggle("Custom FOV", "Override camera FOV", &Options::Misc::FOVEnabled);
+                if (Options::Misc::FOVEnabled)
+                    AppleSlider("FOV", &Options::Misc::FOV, 20.0f, 120.0f, "%.0f");
+                EndApplePanel();
+
+                BeginApplePanel("Config", 130);
+                static char configNameBuf[64] = "config.json";
+                ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
+                ImGui::InputText("##cfgname", configNameBuf, sizeof(configNameBuf));
+                ImGui::PopItemWidth();
+                if (ImGui::Button("Save Config", ImVec2(ImGui::GetContentRegionAvail().x * 0.48f, 0)))
+                {
+                    std::string cfgName = configNameBuf;
+                    bool valid = !cfgName.empty() && cfgName.find_first_of("\\/:*?\"<>|") == std::string::npos;
+                    if (valid)
+                        CreateConfig(cfgName);
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Load Config", ImVec2(ImGui::GetContentRegionAvail().x * 0.48f, 0)))
+                {
+                    std::string cfgName = configNameBuf;
+                    bool valid = !cfgName.empty() && cfgName.find_first_of("\\/:*?\"<>|") == std::string::npos;
+                    if (valid)
+                        LoadConfig(cfgName);
+                }
                 EndApplePanel();
                 ImGui::PopItemWidth();
                 ImGui::EndGroup();
@@ -623,13 +656,25 @@ void ShowImgui() {
                 AppleCombo("Mode", &Options::Desync::ToggleType, desyncModes, 2);
                 AppleToggle("Show Server Pos", "Visualize real position", &Options::Desync::Visualizer);
                 EndApplePanel();
+
+                ImGui::Dummy(ImVec2(0, 12));
+                BeginApplePanel("Hitbox Expander", 260);
+                AppleToggle("Enabled", "Expand hitboxes", &Options::HitboxExpander::Enabled);
+                if (Options::HitboxExpander::Enabled)
+                {
+                    AppleSlider("Horizontal Size", &Options::HitboxExpander::HorizontalSize, 1.0f, 30.0f, "%.1f");
+                    AppleSlider("Vertical Size", &Options::HitboxExpander::VerticalSize, 1.0f, 30.0f, "%.1f");
+                    AppleToggle("Walk Through", "Disable collision on hitbox", &Options::HitboxExpander::WalkThrough);
+                    AppleToggle("Show Hitbox", "Make hitbox visible", &Options::HitboxExpander::ShowHitbox);
+                }
+                EndApplePanel();
                 ImGui::EndGroup();
 
             } else if (mainTab == 3) { // Triggerbot
                 ImGui::BeginGroup();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.48f);
 
-                BeginApplePanel("Triggerbot", 240);
+                BeginApplePanel("Triggerbot", 400);
                 AppleToggle("Enabled", "Auto-fire when aiming at target", &Options::Triggerbot::Enabled);
                 AppleBind("Trigger Key", &Options::Triggerbot::TriggerbotKey);
                 const char* tbToggle[] = {"Hold", "Toggle"};
@@ -639,6 +684,11 @@ void ShowImgui() {
                 AppleSlider("Delay (ms)", &delayF, 0.0f, 500.0f, "%.0f");
                 Options::Triggerbot::Delay = (int)delayF;
 
+                AppleToggle("Teamcheck", "Ignore teammates", &Options::Triggerbot::TeamCheck);
+                AppleToggle("Knockcheck", "Ignore downed players", &Options::Triggerbot::DownedCheck);
+                AppleToggle("Advanced FOV", "Per-bodypart hitboxes", &Options::Triggerbot::AdvancedFOV);
+                if (Options::Triggerbot::AdvancedFOV)
+                    AppleToggle("Show Advanced FOV", "Visualize per-part boxes", &Options::Triggerbot::ShowAdvancedFOV);
                 EndApplePanel();
                 ImGui::PopItemWidth();
                 ImGui::EndGroup();
@@ -742,10 +792,14 @@ void CleanupDeviceD3D()
 }
 void CreateRenderTarget()
 {
-    ID3D11Texture2D* pBackBuffer;
-    g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
-    g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &g_mainRenderTargetView);
+    ID3D11Texture2D* pBackBuffer = nullptr;
+    HRESULT hr = g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+    if (FAILED(hr) || !pBackBuffer)
+        return;
+    hr = g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &g_mainRenderTargetView);
     pBackBuffer->Release();
+    if (FAILED(hr))
+        g_mainRenderTargetView = nullptr;
 }
 void CleanupRenderTarget()
 {

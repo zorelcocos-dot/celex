@@ -301,7 +301,16 @@ struct sCFrame
 inline sCFrame LookAt(const Vectors::Vector3& pos, const Vectors::Vector3& target, const Vectors::Vector3& up = { 0.f, 1.f, 0.f })
 {
     Vectors::Vector3 forward = (target - pos).Normalize();
-    Vectors::Vector3 right = forward.cross(up).Normalize();
+    // Degenerate cases: pos == target, or looking straight up/down where
+    // forward is parallel to up -> cross product is zero and the resulting
+    // matrix would be all-zero (broken camera rotation). Fall back to a
+    // safe direction instead.
+    if (forward.Magnitude() == 0.0f)
+        forward = { 0.f, 0.f, -1.f };
+    Vectors::Vector3 right = forward.cross(up);
+    if (right.Magnitude() < 1e-4f)
+        right = { 1.f, 0.f, 0.f };
+    right = right.Normalize();
     Vectors::Vector3 realUp = right.cross(forward);
 
     sCFrame result;

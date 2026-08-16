@@ -1,6 +1,7 @@
 #pragma once
 #include "../overlay/utils/W2S.h"
 #include "../overlay/imgui/imgui.h"
+#include "../overlay/imgui/KeyBind.h"
 #include "../rbx/globals/options.h"
 #include "../rbx/globals/globals.h"
 #include <windows.h>
@@ -14,12 +15,12 @@ inline void RenderAdvancedFOV(ImDrawList* drawList)
     auto localTeam = Globals::Roblox::LocalPlayer.Team();
     
     std::vector<RobloxPlayer> currentPlayers;
-	{
-		std::lock_guard<std::mutex> lock(Globals::Caches::PlayerObjectsMutex);
-		currentPlayers = Globals::Caches::CachedPlayerObjects;
-	}
+		{
+			std::lock_guard<std::mutex> lock(Globals::Caches::PlayerObjectsMutex);
+			currentPlayers = Globals::Caches::CachedPlayerObjects;
+		}
 
-	for (auto& player : currentPlayers)
+		for (auto& player : currentPlayers)
     {
         if (player.address == Globals::Roblox::LocalPlayer.address)
             continue;
@@ -27,7 +28,8 @@ inline void RenderAdvancedFOV(ImDrawList* drawList)
         if (player.Health <= 0)
             continue;
 
-        if (player.Team.address == localTeam.address && Options::Triggerbot::TeamCheck)
+        // Only skip teammates when the local player actually has a team
+        if (Options::Triggerbot::TeamCheck && localTeam.address != 0 && player.Team.address == localTeam.address)
             continue;
 
         // Helper lambda to draw 3D box around a body part with FOV expansion
@@ -197,6 +199,8 @@ inline void RunTriggerbot()
     auto localTeam = Globals::Roblox::LocalPlayer.Team();
     auto localCharacter = Globals::Roblox::LocalPlayer.Character();
     auto localHRP = localCharacter.FindFirstChild("HumanoidRootPart");
+    if (!localHRP.address)
+        return;
     
     std::vector<RobloxPlayer> currentPlayers;
 	{
@@ -223,7 +227,8 @@ inline void RunTriggerbot()
         if (player.Health <= 0)
             continue;
 
-        if (player.Team.address == localTeam.address && Options::Triggerbot::TeamCheck)
+        // Only skip teammates when the local player actually has a team
+        if (Options::Triggerbot::TeamCheck && localTeam.address != 0 && player.Team.address == localTeam.address)
             continue;
 
         // Check if player is knocked (downed) - health at or below 5
