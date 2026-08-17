@@ -1,8 +1,10 @@
 #pragma once
 #include <windows.h>
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <vector>
 #include <string>
 
@@ -46,13 +48,42 @@ namespace Globals
 {
     namespace Roblox
     {
-        inline RobloxInstance DataModel(0);
-        inline uintptr_t VisualEngine = 0;
-        inline RobloxInstance Workspace(0);
-        inline RobloxInstance Players(0);
-        inline RobloxInstance Camera(0);
-        inline RobloxInstance LocalPlayer(0);
-        inline int lastPlaceID = 0;
+        struct State
+        {
+            RobloxInstance DataModel{0};
+            uintptr_t VisualEngine = 0;
+            RobloxInstance Workspace{0};
+            RobloxInstance Players{0};
+            RobloxInstance Camera{0};
+            RobloxInstance LocalPlayer{0};
+            int LastPlaceId = 0;
+        };
+
+        inline std::shared_mutex StateMutex;
+        inline State CurrentState;
+
+        inline State Snapshot()
+        {
+            std::shared_lock lock(StateMutex);
+            return CurrentState;
+        }
+
+        inline void Replace(State state)
+        {
+            std::unique_lock lock(StateMutex);
+            CurrentState = state;
+        }
+
+        inline void Clear()
+        {
+            Replace(State{});
+        }
+    }
+    namespace Runtime
+    {
+        inline std::atomic_bool StopRequested = false;
+        inline std::atomic_bool OverlayRunning = false;
+        inline std::atomic_bool GameConnected = false;
     }
     namespace Caches
     {

@@ -3,340 +3,597 @@
 #include "../configs/json.hpp"
 #include "../globals/options.h"
 #include "../globals/globals.h"
-#include <fstream>  
 
-using json = nlohmann::json;
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <limits>
+#include <mutex>
+#include <string>
+#include <system_error>
+#include <vector>
 
-inline json CreateConfig(std::string configName)
+namespace Config
 {
-    json j;
+    using json = nlohmann::json;
 
-    j["ESP"] = 
+    inline constexpr int CurrentSchemaVersion = 2;
+
+    struct Result
     {
-        { "Team Check", Options::ESP::TeamCheck },
-        { "Box Type", Options::ESP::BoxType },
-        { "Tracers", Options::ESP::Tracers },
-        { "TracersStart", Options::ESP::TracersStart },
-        { "Skeleton", Options::ESP::Skeleton },
-        { "Name", Options::ESP::Name },
-        { "Distance", Options::ESP::Distance },
-        { "Health", Options::ESP::Health },
-        { "Tracer Thickness", Options::ESP::TracerThickness },
-        { "Head Circles", Options::ESP::HeadCircle },
-        { "Remove Borders", Options::ESP::RemoveBorders },
-        { "Headless", Options::ESP::Headless },
-
-        { "Name Color", Options::ESP::Color },
-        { "Box Color", Options::ESP::BoxColor },
-        { "Skeleton Color", Options::ESP::SkeletonColor },
-        { "Distance Color", Options::ESP::DistanceColor },
-        { "Tracers Color", Options::ESP::TracerColor },
-        { "3D ESP Color", Options::ESP::ESP3DColor },
-        { "Head Circles Color", Options::ESP::HeadCircleColor },
-        { "Chams Color", Options::ESP::ChamsColor }
+        bool success = false;
+        std::string message;
+        std::string fileName;
     };
 
-    j["Aimbot"] =
+    template <std::size_t N>
+    inline json FloatArray(const float (&values)[N])
     {
-        {"Aimbot Key", Options::Aimbot::AimbotKey},
-        {"Aiming Type", Options::Aimbot::AimingType},
-        {"Toggle Type", Options::Aimbot::ToggleType},
-        {"Aimbot", Options::Aimbot::Aimbot},
-        {"Team Check", Options::Aimbot::TeamCheck},
-        {"Downed Check", Options::Aimbot::DownedCheck},
-        {"Sticky Aim", Options::Aimbot::StickyAim},
-        {"Target Bone", Options::Aimbot::TargetBone},
-        {"Air Target Bone", Options::Aimbot::AirTargetBone},
-        {"FOV", Options::Aimbot::FOV},
-        {"Show FOV", Options::Aimbot::ShowFOV},
-        {"Show FOV Fill", Options::Aimbot::ShowFOVFill},
-        {"FOV Color", Options::Aimbot::FOVColor},
-        {"FOV Fill Color", Options::Aimbot::FOVFillColor},
-        {"FOV Thickness", Options::Aimbot::FOVThickness},
-        {"Smoothness", Options::Aimbot::Smoothness},
-        {"Smoothness Curve", Options::Aimbot::SmoothnessCurve},
-        {"Range", Options::Aimbot::Range},
-        {"Prediction", Options::Aimbot::Prediction},
-        {"Prediction X", Options::Aimbot::PredictionX},
-        {"Prediction Y", Options::Aimbot::PredictionY},
-        {"Shake", Options::Aimbot::Shake},
-        {"Shake Intensity", Options::Aimbot::ShakeIntensity},
-        {"Stutter", Options::Aimbot::Stutter},
-        {"Stutter Ticks", Options::Aimbot::StutterTicks}
-    };
-
-    j["Triggerbot"] =
-    {
-        {"Triggerbot Key", Options::Triggerbot::TriggerbotKey},
-        {"Toggle Type", Options::Triggerbot::ToggleType},
-        {"Enabled", Options::Triggerbot::Enabled},
-        {"Team Check", Options::Triggerbot::TeamCheck},
-        {"Downed Check", Options::Triggerbot::DownedCheck},
-        {"Radius", Options::Triggerbot::Radius},
-        {"Range", Options::Triggerbot::Range},
-        {"Delay", Options::Triggerbot::Delay}
-    };
-
-    j["Macro"] =
-    {
-        {"Macro Key", Options::Macro::MacroKey},
-        {"Toggle Type", Options::Macro::ToggleType},
-        {"Enabled", Options::Macro::Enabled},
-        {"Delay", Options::Macro::Delay}
-    };
-
-    j["Crosshair"] =
-    {
-        {"Enabled", Options::Crosshair::Enabled},
-        {"Style", Options::Crosshair::Style},
-        {"Size", Options::Crosshair::Size},
-        {"Gap", Options::Crosshair::Gap},
-        {"Thickness", Options::Crosshair::Thickness},
-        {"Spin Speed", Options::Crosshair::SpinSpeed},
-        {"Gap Speed", Options::Crosshair::GapSpeed},
-        {"Gap Tween", Options::Crosshair::GapTween},
-        {"Show Text", Options::Crosshair::ShowText},
-        {"Color", Options::Crosshair::Color}
-    };
-
-    j["Misc"] =
-    {
-        {"Bypass", Options::Misc::Bypass},
-        {"FOV", Options::Misc::FOV},
-        {"Cache NPCs", Options::Misc::CacheNPCs},
-        {"Keybind List", Options::Misc::KeybindList},
-        {"Keybind List X", Options::Misc::KeybindListX},
-        {"Keybind List Y", Options::Misc::KeybindListY},
-        {"Stream Proof", Options::Misc::StreamProof},
-        {"Menu Accent Color", Options::Misc::MenuAccentColor}
-    };
-
-    j["HitboxExpander"] =
-    {
-        {"Enabled", Options::HitboxExpander::Enabled},
-        {"Horizontal Size", Options::HitboxExpander::HorizontalSize},
-        {"Vertical Size", Options::HitboxExpander::VerticalSize},
-        {"Show Hitbox", Options::HitboxExpander::ShowHitbox},
-        {"Transparency", Options::HitboxExpander::HitboxTransparency},
-        {"Walk Through", Options::HitboxExpander::WalkThrough}
-    };
-
-    j["Fly"] =
-    {
-        {"Fly Key", Options::Fly::FlyKey},
-        {"Toggle Type", Options::Fly::ToggleType},
-        {"Enabled", Options::Fly::Enabled},
-        {"Speed", Options::Fly::Speed}
-    };
-
-    j["WalkSpeed"] =
-    {
-        {"WalkSpeed Key", Options::WalkSpeed::WalkSpeedKey},
-        {"Toggle Type", Options::WalkSpeed::ToggleType},
-        {"Enabled", Options::WalkSpeed::Enabled},
-        {"Speed", Options::WalkSpeed::Speed}
-    };
-
-    std::ofstream out(Globals::configsPath + "\\" + configName);
-    out << j.dump(4);
-    out.close();
-
-    return j;
-}
-
-inline void LoadConfig(std::string configName)
-{
-    std::ifstream f(Globals::configsPath + "\\" + configName);
-    if (!f.is_open()) return;
-    json data;
-    try { data = json::parse(f); } catch (...) { return; }
-    if (!data.contains("ESP") || !data.contains("Aimbot") || !data.contains("Misc")) return;
-
-    try {
-    //ESP Loading
-    if (data["ESP"].contains("Team Check")) Options::ESP::TeamCheck = data["ESP"]["Team Check"];
-    
-    if (data["ESP"].contains("Box Type"))
-        Options::ESP::BoxType = data["ESP"]["Box Type"];
-    else if (data["ESP"].contains("Box"))
-    {
-        bool oldBox = data["ESP"]["Box"];
-        Options::ESP::BoxType = oldBox ? 1 : 0;
-    }
-    
-    if (data["ESP"].contains("Tracers")) Options::ESP::Tracers = data["ESP"]["Tracers"];
-    if (data["ESP"].contains("TracersStart")) Options::ESP::TracersStart = data["ESP"]["TracersStart"];
-    if (data["ESP"].contains("Skeleton")) Options::ESP::Skeleton = data["ESP"]["Skeleton"];
-    if (data["ESP"].contains("Name")) Options::ESP::Name = data["ESP"]["Name"];
-    if (data["ESP"].contains("Distance")) Options::ESP::Distance = data["ESP"]["Distance"];
-    if (data["ESP"].contains("Health")) Options::ESP::Health = data["ESP"]["Health"];
-    if (data["ESP"].contains("Tracer Thickness")) Options::ESP::TracerThickness = data["ESP"]["Tracer Thickness"];
-    if (data["ESP"].contains("Head Circles")) Options::ESP::HeadCircle = data["ESP"]["Head Circles"];
-    if (data["ESP"].contains("Remove Borders")) Options::ESP::RemoveBorders = data["ESP"]["Remove Borders"];
-    
-    if (data["ESP"].contains("Headless"))
-        Options::ESP::Headless = data["ESP"]["Headless"];
-
-    if (data["ESP"].contains("Name Color")) {
-        Options::ESP::Color[0] = data["ESP"]["Name Color"][0];
-        Options::ESP::Color[1] = data["ESP"]["Name Color"][1];
-        Options::ESP::Color[2] = data["ESP"]["Name Color"][2];
-    }
-    if (data["ESP"].contains("Box Color")) {
-        Options::ESP::BoxColor[0] = data["ESP"]["Box Color"][0];
-        Options::ESP::BoxColor[1] = data["ESP"]["Box Color"][1];
-        Options::ESP::BoxColor[2] = data["ESP"]["Box Color"][2];
-    }
-    if (data["ESP"].contains("Distance Color")) {
-        Options::ESP::DistanceColor[0] = data["ESP"]["Distance Color"][0];
-        Options::ESP::DistanceColor[1] = data["ESP"]["Distance Color"][1];
-        Options::ESP::DistanceColor[2] = data["ESP"]["Distance Color"][2];
-    }
-    if (data["ESP"].contains("Tracers Color")) {
-        Options::ESP::TracerColor[0] = data["ESP"]["Tracers Color"][0];
-        Options::ESP::TracerColor[1] = data["ESP"]["Tracers Color"][1];
-        Options::ESP::TracerColor[2] = data["ESP"]["Tracers Color"][2];
-    }
-    if (data["ESP"].contains("3D ESP Color")) {
-        Options::ESP::ESP3DColor[0] = data["ESP"]["3D ESP Color"][0];
-        Options::ESP::ESP3DColor[1] = data["ESP"]["3D ESP Color"][1];
-        Options::ESP::ESP3DColor[2] = data["ESP"]["3D ESP Color"][2];
-    }
-    if (data["ESP"].contains("Head Circles Color")) {
-        Options::ESP::HeadCircleColor[0] = data["ESP"]["Head Circles Color"][0];
-        Options::ESP::HeadCircleColor[1] = data["ESP"]["Head Circles Color"][1];
-        Options::ESP::HeadCircleColor[2] = data["ESP"]["Head Circles Color"][2];
+        json result = json::array();
+        for (const float value : values)
+            result.push_back(value);
+        return result;
     }
 
-    if (data["ESP"].contains("Chams Color"))
+    inline json Capture()
     {
-        Options::ESP::ChamsColor[0] = data["ESP"]["Chams Color"][0];
-        Options::ESP::ChamsColor[1] = data["ESP"]["Chams Color"][1];
-        Options::ESP::ChamsColor[2] = data["ESP"]["Chams Color"][2];
+        std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+
+        json j;
+        j["schemaVersion"] = CurrentSchemaVersion;
+
+        j["ESP"] = {
+            {"Team Check", Options::ESP::TeamCheck},
+            {"Box Type", Options::ESP::BoxType},
+            {"Tracers", Options::ESP::Tracers},
+            {"TracersStart", Options::ESP::TracersStart},
+            {"Skeleton", Options::ESP::Skeleton},
+            {"Name", Options::ESP::Name},
+            {"Distance", Options::ESP::Distance},
+            {"Health", Options::ESP::Health},
+            {"Head Circles", Options::ESP::HeadCircle},
+            {"Corner ESP", Options::ESP::CornerESP},
+            {"Headless", Options::ESP::Headless},
+            {"Remove Borders", Options::ESP::RemoveBorders},
+            {"Tracer Thickness", Options::ESP::TracerThickness},
+            {"Box Thickness", Options::ESP::BoxThickness},
+            {"Skeleton Thickness", Options::ESP::SkeletonThickness},
+            {"3D ESP Thickness", Options::ESP::ESP3DThickness},
+            {"Head Circle Thickness", Options::ESP::HeadCircleThickness},
+            {"Head Circle Max Scale", Options::ESP::HeadCircleMaxScale},
+            {"Name Color", FloatArray(Options::ESP::Color)},
+            {"Box Color", FloatArray(Options::ESP::BoxColor)},
+            {"Corner Color", FloatArray(Options::ESP::CornerColor)},
+            {"Skeleton Color", FloatArray(Options::ESP::SkeletonColor)},
+            {"Distance Color", FloatArray(Options::ESP::DistanceColor)},
+            {"Tracers Color", FloatArray(Options::ESP::TracerColor)},
+            {"3D ESP Color", FloatArray(Options::ESP::ESP3DColor)},
+            {"Head Circles Color", FloatArray(Options::ESP::HeadCircleColor)},
+            {"Chams Color", FloatArray(Options::ESP::ChamsColor)}
+        };
+
+        j["Aimbot"] = {
+            {"Aimbot Key", Options::Aimbot::AimbotKey},
+            {"Aiming Type", Options::Aimbot::AimingType},
+            {"Toggle Type", Options::Aimbot::ToggleType},
+            {"Aimbot", Options::Aimbot::Aimbot},
+            {"Team Check", Options::Aimbot::TeamCheck},
+            {"Downed Check", Options::Aimbot::DownedCheck},
+            {"Sticky Aim", Options::Aimbot::StickyAim},
+            {"Target Bone", Options::Aimbot::TargetBone},
+            {"Air Target Bone", Options::Aimbot::AirTargetBone},
+            {"FOV", Options::Aimbot::FOV},
+            {"Show FOV", Options::Aimbot::ShowFOV},
+            {"Show FOV Fill", Options::Aimbot::ShowFOVFill},
+            {"FOV Color", FloatArray(Options::Aimbot::FOVColor)},
+            {"FOV Fill Color", FloatArray(Options::Aimbot::FOVFillColor)},
+            {"FOV Thickness", Options::Aimbot::FOVThickness},
+            {"Smoothness", Options::Aimbot::Smoothness},
+            {"Smoothness Curve", Options::Aimbot::SmoothnessCurve},
+            {"Custom Curve Enabled", Options::Aimbot::CustomCurveEnabled},
+            {"Custom Curve P1", FloatArray(Options::Aimbot::CustomCurveP1)},
+            {"Custom Curve P2", FloatArray(Options::Aimbot::CustomCurveP2)},
+            {"Range", Options::Aimbot::Range},
+            {"Prediction", Options::Aimbot::Prediction},
+            {"Prediction X", Options::Aimbot::PredictionX},
+            {"Prediction Y", Options::Aimbot::PredictionY},
+            {"Shake", Options::Aimbot::Shake},
+            {"Shake Intensity", Options::Aimbot::ShakeIntensity},
+            {"Stutter", Options::Aimbot::Stutter},
+            {"Stutter Ticks", Options::Aimbot::StutterTicks}
+        };
+
+        j["Triggerbot"] = {
+            {"Triggerbot Key", Options::Triggerbot::TriggerbotKey},
+            {"Toggle Type", Options::Triggerbot::ToggleType},
+            {"Enabled", Options::Triggerbot::Enabled},
+            {"Team Check", Options::Triggerbot::TeamCheck},
+            {"Downed Check", Options::Triggerbot::DownedCheck},
+            {"Radius", Options::Triggerbot::Radius},
+            {"Range", Options::Triggerbot::Range},
+            {"Delay", Options::Triggerbot::Delay},
+            {"Advanced FOV", Options::Triggerbot::AdvancedFOV},
+            {"Show Advanced FOV", Options::Triggerbot::ShowAdvancedFOV},
+            {"Head FOV X", Options::Triggerbot::HeadFOV_X},
+            {"Head FOV Y", Options::Triggerbot::HeadFOV_Y},
+            {"Torso FOV X", Options::Triggerbot::TorsoFOV_X},
+            {"Torso FOV Y", Options::Triggerbot::TorsoFOV_Y},
+            {"Upper Torso FOV X", Options::Triggerbot::UpperTorsoFOV_X},
+            {"Upper Torso FOV Y", Options::Triggerbot::UpperTorsoFOV_Y},
+            {"Lower Torso FOV X", Options::Triggerbot::LowerTorsoFOV_X},
+            {"Lower Torso FOV Y", Options::Triggerbot::LowerTorsoFOV_Y},
+            {"Left Upper Arm FOV X", Options::Triggerbot::LeftUpperArmFOV_X},
+            {"Left Upper Arm FOV Y", Options::Triggerbot::LeftUpperArmFOV_Y},
+            {"Left Lower Arm FOV X", Options::Triggerbot::LeftLowerArmFOV_X},
+            {"Left Lower Arm FOV Y", Options::Triggerbot::LeftLowerArmFOV_Y},
+            {"Left Hand FOV X", Options::Triggerbot::LeftHandFOV_X},
+            {"Left Hand FOV Y", Options::Triggerbot::LeftHandFOV_Y},
+            {"Right Upper Arm FOV X", Options::Triggerbot::RightUpperArmFOV_X},
+            {"Right Upper Arm FOV Y", Options::Triggerbot::RightUpperArmFOV_Y},
+            {"Right Lower Arm FOV X", Options::Triggerbot::RightLowerArmFOV_X},
+            {"Right Lower Arm FOV Y", Options::Triggerbot::RightLowerArmFOV_Y},
+            {"Right Hand FOV X", Options::Triggerbot::RightHandFOV_X},
+            {"Right Hand FOV Y", Options::Triggerbot::RightHandFOV_Y},
+            {"Left Upper Leg FOV X", Options::Triggerbot::LeftUpperLegFOV_X},
+            {"Left Upper Leg FOV Y", Options::Triggerbot::LeftUpperLegFOV_Y},
+            {"Left Lower Leg FOV X", Options::Triggerbot::LeftLowerLegFOV_X},
+            {"Left Lower Leg FOV Y", Options::Triggerbot::LeftLowerLegFOV_Y},
+            {"Left Foot FOV X", Options::Triggerbot::LeftFootFOV_X},
+            {"Left Foot FOV Y", Options::Triggerbot::LeftFootFOV_Y},
+            {"Right Upper Leg FOV X", Options::Triggerbot::RightUpperLegFOV_X},
+            {"Right Upper Leg FOV Y", Options::Triggerbot::RightUpperLegFOV_Y},
+            {"Right Lower Leg FOV X", Options::Triggerbot::RightLowerLegFOV_X},
+            {"Right Lower Leg FOV Y", Options::Triggerbot::RightLowerLegFOV_Y},
+            {"Right Foot FOV X", Options::Triggerbot::RightFootFOV_X},
+            {"Right Foot FOV Y", Options::Triggerbot::RightFootFOV_Y}
+        };
+
+        j["Macro"] = {
+            {"Macro Key", Options::Macro::MacroKey},
+            {"Toggle Type", Options::Macro::ToggleType},
+            {"Enabled", Options::Macro::Enabled},
+            {"Delay", Options::Macro::Delay}
+        };
+
+        j["Crosshair"] = {
+            {"Enabled", Options::Crosshair::Enabled},
+            {"Style", Options::Crosshair::Style},
+            {"Size", Options::Crosshair::Size},
+            {"Gap", Options::Crosshair::Gap},
+            {"Thickness", Options::Crosshair::Thickness},
+            {"Spin Speed", Options::Crosshair::SpinSpeed},
+            {"Gap Speed", Options::Crosshair::GapSpeed},
+            {"Gap Tween", Options::Crosshair::GapTween},
+            {"Show Text", Options::Crosshair::ShowText},
+            {"Color", FloatArray(Options::Crosshair::Color)}
+        };
+
+        j["Misc"] = {
+            {"Bypass", Options::Misc::Bypass},
+            {"FOV Enabled", Options::Misc::FOVEnabled},
+            {"FOV", Options::Misc::FOV},
+            {"Cache NPCs", Options::Misc::CacheNPCs},
+            {"Keybind List", Options::Misc::KeybindList},
+            {"Keybind List X", Options::Misc::KeybindListX},
+            {"Keybind List Y", Options::Misc::KeybindListY},
+            {"Stream Proof", Options::Misc::StreamProof},
+            {"Menu Accent Color", FloatArray(Options::Misc::MenuAccentColor)},
+            {"Menu Key", Options::Misc::MenuKey}
+        };
+
+        j["HitboxExpander"] = {
+            {"Enabled", Options::HitboxExpander::Enabled},
+            {"Horizontal Size", Options::HitboxExpander::HorizontalSize},
+            {"Vertical Size", Options::HitboxExpander::VerticalSize},
+            {"Show Hitbox", Options::HitboxExpander::ShowHitbox},
+            {"Transparency", Options::HitboxExpander::HitboxTransparency},
+            {"Walk Through", Options::HitboxExpander::WalkThrough}
+        };
+
+        j["Fly"] = {
+            {"Fly Key", Options::Fly::FlyKey},
+            {"Toggle Type", Options::Fly::ToggleType},
+            {"Enabled", Options::Fly::Enabled},
+            {"Speed", Options::Fly::Speed}
+        };
+
+        j["WalkSpeed"] = {
+            {"WalkSpeed Key", Options::WalkSpeed::WalkSpeedKey},
+            {"Toggle Type", Options::WalkSpeed::ToggleType},
+            {"Enabled", Options::WalkSpeed::Enabled},
+            {"Speed", Options::WalkSpeed::Speed}
+        };
+
+        j["Desync"] = {
+            {"Enabled", Options::Desync::Enabled},
+            {"Key", Options::Desync::Key},
+            {"Toggle Type", Options::Desync::ToggleType},
+            {"Visualizer", Options::Desync::Visualizer},
+            {"Visualizer Color", FloatArray(Options::Desync::VisualizerColor)}
+        };
+
+        return j;
     }
 
-    // Aimbot Loading
-    if (data.contains("Aimbot")) {
-        if (data["Aimbot"].contains("Aimbot Key")) Options::Aimbot::AimbotKey = data["Aimbot"]["Aimbot Key"];
-        if (data["Aimbot"].contains("Aiming Type")) Options::Aimbot::AimingType = data["Aimbot"]["Aiming Type"];
-        if (data["Aimbot"].contains("Toggle Type")) Options::Aimbot::ToggleType = data["Aimbot"]["Toggle Type"];
-        if (data["Aimbot"].contains("Aimbot")) Options::Aimbot::Aimbot = data["Aimbot"]["Aimbot"];
-        if (data["Aimbot"].contains("Team Check")) Options::Aimbot::TeamCheck = data["Aimbot"]["Team Check"];
-        if (data["Aimbot"].contains("Downed Check")) Options::Aimbot::DownedCheck = data["Aimbot"]["Downed Check"];
-        if (data["Aimbot"].contains("Sticky Aim")) Options::Aimbot::StickyAim = data["Aimbot"]["Sticky Aim"];
-        if (data["Aimbot"].contains("Target Bone")) Options::Aimbot::TargetBone = data["Aimbot"]["Target Bone"];
-        if (data["Aimbot"].contains("Air Target Bone")) Options::Aimbot::AirTargetBone = data["Aimbot"]["Air Target Bone"];
-        if (data["Aimbot"].contains("FOV")) Options::Aimbot::FOV = data["Aimbot"]["FOV"];
-        if (data["Aimbot"].contains("Show FOV")) Options::Aimbot::ShowFOV = data["Aimbot"]["Show FOV"];
-        if (data["Aimbot"].contains("Show FOV Fill")) Options::Aimbot::ShowFOVFill = data["Aimbot"]["Show FOV Fill"];
-        if (data["Aimbot"].contains("FOV Color")) {
-            Options::Aimbot::FOVColor[0] = data["Aimbot"]["FOV Color"][0];
-            Options::Aimbot::FOVColor[1] = data["Aimbot"]["FOV Color"][1];
-            Options::Aimbot::FOVColor[2] = data["Aimbot"]["FOV Color"][2];
-        }
-        if (data["Aimbot"].contains("FOV Fill Color")) {
-            Options::Aimbot::FOVFillColor[0] = data["Aimbot"]["FOV Fill Color"][0];
-            Options::Aimbot::FOVFillColor[1] = data["Aimbot"]["FOV Fill Color"][1];
-            Options::Aimbot::FOVFillColor[2] = data["Aimbot"]["FOV Fill Color"][2];
-        }
-        if (data["Aimbot"].contains("FOV Thickness")) Options::Aimbot::FOVThickness = data["Aimbot"]["FOV Thickness"];
-        if (data["Aimbot"].contains("Smoothness")) Options::Aimbot::Smoothness = data["Aimbot"]["Smoothness"];
-        if (data["Aimbot"].contains("Smoothness Curve")) Options::Aimbot::SmoothnessCurve = data["Aimbot"]["Smoothness Curve"];
-        if (data["Aimbot"].contains("Range")) Options::Aimbot::Range = data["Aimbot"]["Range"];
-        if (data["Aimbot"].contains("Prediction")) Options::Aimbot::Prediction = data["Aimbot"]["Prediction"];
-        if (data["Aimbot"].contains("Prediction X")) Options::Aimbot::PredictionX = data["Aimbot"]["Prediction X"];
-        if (data["Aimbot"].contains("Prediction Y")) Options::Aimbot::PredictionY = data["Aimbot"]["Prediction Y"];
-        if (data["Aimbot"].contains("Shake")) Options::Aimbot::Shake = data["Aimbot"]["Shake"];
-        if (data["Aimbot"].contains("Shake Intensity")) Options::Aimbot::ShakeIntensity = data["Aimbot"]["Shake Intensity"];
-        if (data["Aimbot"].contains("Stutter")) Options::Aimbot::Stutter = data["Aimbot"]["Stutter"];
-        if (data["Aimbot"].contains("Stutter Ticks")) Options::Aimbot::StutterTicks = data["Aimbot"]["Stutter Ticks"];
+    inline const json* Section(const json& root, const char* name)
+    {
+        const auto it = root.find(name);
+        return it != root.end() && it->is_object() ? &(*it) : nullptr;
     }
 
-    // Triggerbot Loading
-    if (data.contains("Triggerbot"))
+    inline void ReadBool(const json* section, const char* key, bool& target)
     {
-        if (data["Triggerbot"].contains("Triggerbot Key")) Options::Triggerbot::TriggerbotKey = data["Triggerbot"]["Triggerbot Key"];
-        if (data["Triggerbot"].contains("Toggle Type")) Options::Triggerbot::ToggleType = data["Triggerbot"]["Toggle Type"];
-        if (data["Triggerbot"].contains("Enabled")) Options::Triggerbot::Enabled = data["Triggerbot"]["Enabled"];
-        if (data["Triggerbot"].contains("Team Check")) Options::Triggerbot::TeamCheck = data["Triggerbot"]["Team Check"];
-        if (data["Triggerbot"].contains("Downed Check")) Options::Triggerbot::DownedCheck = data["Triggerbot"]["Downed Check"];
-        if (data["Triggerbot"].contains("Radius")) Options::Triggerbot::Radius = data["Triggerbot"]["Radius"];
-        if (data["Triggerbot"].contains("Range")) Options::Triggerbot::Range = data["Triggerbot"]["Range"];
-        if (data["Triggerbot"].contains("Delay")) Options::Triggerbot::Delay = data["Triggerbot"]["Delay"];
+        if (!section)
+            return;
+        const auto it = section->find(key);
+        if (it != section->end() && it->is_boolean())
+            target = it->get<bool>();
     }
 
-    // Macro Loading
-    if (data.contains("Macro"))
+    inline void ReadInt(const json* section, const char* key, int& target, int minimum, int maximum)
     {
-        if (data["Macro"].contains("Macro Key")) Options::Macro::MacroKey = data["Macro"]["Macro Key"];
-        if (data["Macro"].contains("Toggle Type")) Options::Macro::ToggleType = data["Macro"]["Toggle Type"];
-        if (data["Macro"].contains("Enabled")) Options::Macro::Enabled = data["Macro"]["Enabled"];
-        if (data["Macro"].contains("Delay")) Options::Macro::Delay = data["Macro"]["Delay"];
+        if (!section)
+            return;
+        const auto it = section->find(key);
+        if (it == section->end() || !(it->is_number_integer() || it->is_number_unsigned()))
+            return;
+        const long double value = it->get<long double>();
+        if (!std::isfinite(value))
+            return;
+        target = static_cast<int>(std::clamp(
+            value, static_cast<long double>(minimum), static_cast<long double>(maximum)));
     }
 
-    // Crosshair Loading
-    if (data.contains("Crosshair"))
+    inline void ReadFloat(const json* section, const char* key, float& target, float minimum, float maximum)
     {
-        if (data["Crosshair"].contains("Enabled")) Options::Crosshair::Enabled = data["Crosshair"]["Enabled"];
-        if (data["Crosshair"].contains("Style")) Options::Crosshair::Style = data["Crosshair"]["Style"];
-        if (data["Crosshair"].contains("Size")) Options::Crosshair::Size = data["Crosshair"]["Size"];
-        if (data["Crosshair"].contains("Gap")) Options::Crosshair::Gap = data["Crosshair"]["Gap"];
-        if (data["Crosshair"].contains("Thickness")) Options::Crosshair::Thickness = data["Crosshair"]["Thickness"];
-        if (data["Crosshair"].contains("Spin Speed")) Options::Crosshair::SpinSpeed = data["Crosshair"]["Spin Speed"];
-        if (data["Crosshair"].contains("Gap Speed")) Options::Crosshair::GapSpeed = data["Crosshair"]["Gap Speed"];
-        if (data["Crosshair"].contains("Gap Tween")) Options::Crosshair::GapTween = data["Crosshair"]["Gap Tween"];
-        if (data["Crosshair"].contains("Show Text")) Options::Crosshair::ShowText = data["Crosshair"]["Show Text"];
-        if (data["Crosshair"].contains("Color"))
+        if (!section)
+            return;
+        const auto it = section->find(key);
+        if (it == section->end() || !it->is_number())
+            return;
+        const double value = it->get<double>();
+        if (std::isfinite(value))
+            target = static_cast<float>(std::clamp(value, static_cast<double>(minimum), static_cast<double>(maximum)));
+    }
+
+    template <std::size_t N>
+    inline void ReadFloatArray(const json* section, const char* key, float (&target)[N], float minimum = 0.0f, float maximum = 1.0f)
+    {
+        if (!section)
+            return;
+        const auto it = section->find(key);
+        if (it == section->end() || !it->is_array() || it->size() != N)
+            return;
+
+        std::array<float, N> values{};
+        for (std::size_t index = 0; index < N; ++index)
         {
-            Options::Crosshair::Color[0] = data["Crosshair"]["Color"][0];
-            Options::Crosshair::Color[1] = data["Crosshair"]["Color"][1];
-            Options::Crosshair::Color[2] = data["Crosshair"]["Color"][2];
-            Options::Crosshair::Color[3] = data["Crosshair"]["Color"][3];
+            if (!(*it)[index].is_number())
+                return;
+            const double value = (*it)[index].get<double>();
+            if (!std::isfinite(value))
+                return;
+            values[index] = static_cast<float>(std::clamp(value, static_cast<double>(minimum), static_cast<double>(maximum)));
         }
+
+        std::copy(values.begin(), values.end(), target);
     }
 
-    // Misc Loading
-    if (data["Misc"].contains("Bypass")) Options::Misc::Bypass = data["Misc"]["Bypass"];
-    if (data["Misc"].contains("FOV")) Options::Misc::FOV = data["Misc"]["FOV"];
-    if (data["Misc"].contains("Cache NPCs")) Options::Misc::CacheNPCs = data["Misc"]["Cache NPCs"];
-    if (data["Misc"].contains("Keybind List")) Options::Misc::KeybindList = data["Misc"]["Keybind List"];
-    if (data["Misc"].contains("Keybind List X")) Options::Misc::KeybindListX = data["Misc"]["Keybind List X"];
-    if (data["Misc"].contains("Keybind List Y")) Options::Misc::KeybindListY = data["Misc"]["Keybind List Y"];
-    if (data["Misc"].contains("Stream Proof")) Options::Misc::StreamProof = data["Misc"]["Stream Proof"];
-    if (data["Misc"].contains("Menu Accent Color"))
+    inline Result Apply(const json& data)
     {
-        Options::Misc::MenuAccentColor[0] = data["Misc"]["Menu Accent Color"][0];
-        Options::Misc::MenuAccentColor[1] = data["Misc"]["Menu Accent Color"][1];
-        Options::Misc::MenuAccentColor[2] = data["Misc"]["Menu Accent Color"][2];
+        if (!data.is_object())
+            return {false, "Config root must be a JSON object", {}};
+
+        int schemaVersion = 1;
+        const auto versionIt = data.find("schemaVersion");
+        if (versionIt != data.end())
+        {
+            if (!(versionIt->is_number_integer() || versionIt->is_number_unsigned()))
+                return {false, "Invalid config schema version", {}};
+            const long double version = versionIt->get<long double>();
+            if (!std::isfinite(version) || version < 1.0L ||
+                version > static_cast<long double>((std::numeric_limits<int>::max)()))
+                return {false, "Invalid config schema version", {}};
+            schemaVersion = static_cast<int>(version);
+        }
+        if (schemaVersion < 1 || schemaVersion > CurrentSchemaVersion)
+            return {false, "Unsupported config schema version", {}};
+
+        std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+
+        const json* esp = Section(data, "ESP");
+        ReadBool(esp, "Team Check", Options::ESP::TeamCheck);
+        ReadInt(esp, "Box Type", Options::ESP::BoxType, 0, 2);
+        if (esp && !esp->contains("Box Type"))
+        {
+            bool oldBox = Options::ESP::BoxType != 0;
+            ReadBool(esp, "Box", oldBox);
+            Options::ESP::BoxType = oldBox ? 1 : 0;
+        }
+        ReadBool(esp, "Tracers", Options::ESP::Tracers);
+        ReadInt(esp, "TracersStart", Options::ESP::TracersStart, 0, 2);
+        ReadBool(esp, "Skeleton", Options::ESP::Skeleton);
+        ReadBool(esp, "Name", Options::ESP::Name);
+        ReadBool(esp, "Distance", Options::ESP::Distance);
+        ReadBool(esp, "Health", Options::ESP::Health);
+        ReadBool(esp, "Head Circles", Options::ESP::HeadCircle);
+        ReadBool(esp, "Corner ESP", Options::ESP::CornerESP);
+        ReadBool(esp, "Headless", Options::ESP::Headless);
+        ReadBool(esp, "Remove Borders", Options::ESP::RemoveBorders);
+        ReadFloat(esp, "Tracer Thickness", Options::ESP::TracerThickness, 0.5f, 10.0f);
+        ReadFloat(esp, "Box Thickness", Options::ESP::BoxThickness, 0.5f, 10.0f);
+        ReadFloat(esp, "Skeleton Thickness", Options::ESP::SkeletonThickness, 0.5f, 10.0f);
+        ReadFloat(esp, "3D ESP Thickness", Options::ESP::ESP3DThickness, 0.5f, 10.0f);
+        ReadFloat(esp, "Head Circle Thickness", Options::ESP::HeadCircleThickness, 0.5f, 10.0f);
+        ReadFloat(esp, "Head Circle Max Scale", Options::ESP::HeadCircleMaxScale, 0.1f, 10.0f);
+        ReadFloatArray(esp, "Name Color", Options::ESP::Color);
+        ReadFloatArray(esp, "Box Color", Options::ESP::BoxColor);
+        ReadFloatArray(esp, "Corner Color", Options::ESP::CornerColor);
+        ReadFloatArray(esp, "Skeleton Color", Options::ESP::SkeletonColor);
+        ReadFloatArray(esp, "Distance Color", Options::ESP::DistanceColor);
+        ReadFloatArray(esp, "Tracers Color", Options::ESP::TracerColor);
+        ReadFloatArray(esp, "3D ESP Color", Options::ESP::ESP3DColor);
+        ReadFloatArray(esp, "Head Circles Color", Options::ESP::HeadCircleColor);
+        ReadFloatArray(esp, "Chams Color", Options::ESP::ChamsColor);
+
+        const json* aimbot = Section(data, "Aimbot");
+        ReadInt(aimbot, "Aimbot Key", Options::Aimbot::AimbotKey, 0, 255);
+        ReadInt(aimbot, "Aiming Type", Options::Aimbot::AimingType, 0, 1);
+        ReadInt(aimbot, "Toggle Type", Options::Aimbot::ToggleType, 0, 1);
+        ReadBool(aimbot, "Aimbot", Options::Aimbot::Aimbot);
+        ReadBool(aimbot, "Team Check", Options::Aimbot::TeamCheck);
+        ReadBool(aimbot, "Downed Check", Options::Aimbot::DownedCheck);
+        ReadBool(aimbot, "Sticky Aim", Options::Aimbot::StickyAim);
+        ReadInt(aimbot, "Target Bone", Options::Aimbot::TargetBone, 0, 7);
+        ReadInt(aimbot, "Air Target Bone", Options::Aimbot::AirTargetBone, 0, 7);
+        ReadFloat(aimbot, "FOV", Options::Aimbot::FOV, 1.0f, 2000.0f);
+        ReadBool(aimbot, "Show FOV", Options::Aimbot::ShowFOV);
+        ReadBool(aimbot, "Show FOV Fill", Options::Aimbot::ShowFOVFill);
+        ReadFloatArray(aimbot, "FOV Color", Options::Aimbot::FOVColor);
+        ReadFloatArray(aimbot, "FOV Fill Color", Options::Aimbot::FOVFillColor);
+        ReadFloat(aimbot, "FOV Thickness", Options::Aimbot::FOVThickness, 0.5f, 10.0f);
+        ReadFloat(aimbot, "Smoothness", Options::Aimbot::Smoothness, 0.0f, 1.0f);
+        ReadInt(aimbot, "Smoothness Curve", Options::Aimbot::SmoothnessCurve, 0, 4);
+        ReadBool(aimbot, "Custom Curve Enabled", Options::Aimbot::CustomCurveEnabled);
+        ReadFloatArray(aimbot, "Custom Curve P1", Options::Aimbot::CustomCurveP1);
+        ReadFloatArray(aimbot, "Custom Curve P2", Options::Aimbot::CustomCurveP2);
+        ReadFloat(aimbot, "Range", Options::Aimbot::Range, 1.0f, 100000.0f);
+        ReadBool(aimbot, "Prediction", Options::Aimbot::Prediction);
+        ReadFloat(aimbot, "Prediction X", Options::Aimbot::PredictionX, 0.01f, 1000.0f);
+        ReadFloat(aimbot, "Prediction Y", Options::Aimbot::PredictionY, 0.01f, 1000.0f);
+        ReadBool(aimbot, "Shake", Options::Aimbot::Shake);
+        ReadFloat(aimbot, "Shake Intensity", Options::Aimbot::ShakeIntensity, 0.0f, 100.0f);
+        ReadBool(aimbot, "Stutter", Options::Aimbot::Stutter);
+        ReadInt(aimbot, "Stutter Ticks", Options::Aimbot::StutterTicks, 1, 1000);
+
+        const json* triggerbot = Section(data, "Triggerbot");
+        ReadInt(triggerbot, "Triggerbot Key", Options::Triggerbot::TriggerbotKey, 0, 255);
+        ReadInt(triggerbot, "Toggle Type", Options::Triggerbot::ToggleType, 0, 1);
+        ReadBool(triggerbot, "Enabled", Options::Triggerbot::Enabled);
+        ReadBool(triggerbot, "Team Check", Options::Triggerbot::TeamCheck);
+        ReadBool(triggerbot, "Downed Check", Options::Triggerbot::DownedCheck);
+        ReadFloat(triggerbot, "Radius", Options::Triggerbot::Radius, 0.0f, 2000.0f);
+        ReadFloat(triggerbot, "Range", Options::Triggerbot::Range, 1.0f, 100000.0f);
+        ReadInt(triggerbot, "Delay", Options::Triggerbot::Delay, 0, 5000);
+        ReadBool(triggerbot, "Advanced FOV", Options::Triggerbot::AdvancedFOV);
+        ReadBool(triggerbot, "Show Advanced FOV", Options::Triggerbot::ShowAdvancedFOV);
+
+        auto readPartFov = [triggerbot](const char* xName, float& x, const char* yName, float& y)
+        {
+            ReadFloat(triggerbot, xName, x, 0.0f, 2000.0f);
+            ReadFloat(triggerbot, yName, y, 0.0f, 2000.0f);
+        };
+        readPartFov("Head FOV X", Options::Triggerbot::HeadFOV_X, "Head FOV Y", Options::Triggerbot::HeadFOV_Y);
+        readPartFov("Torso FOV X", Options::Triggerbot::TorsoFOV_X, "Torso FOV Y", Options::Triggerbot::TorsoFOV_Y);
+        readPartFov("Upper Torso FOV X", Options::Triggerbot::UpperTorsoFOV_X, "Upper Torso FOV Y", Options::Triggerbot::UpperTorsoFOV_Y);
+        readPartFov("Lower Torso FOV X", Options::Triggerbot::LowerTorsoFOV_X, "Lower Torso FOV Y", Options::Triggerbot::LowerTorsoFOV_Y);
+        readPartFov("Left Upper Arm FOV X", Options::Triggerbot::LeftUpperArmFOV_X, "Left Upper Arm FOV Y", Options::Triggerbot::LeftUpperArmFOV_Y);
+        readPartFov("Left Lower Arm FOV X", Options::Triggerbot::LeftLowerArmFOV_X, "Left Lower Arm FOV Y", Options::Triggerbot::LeftLowerArmFOV_Y);
+        readPartFov("Left Hand FOV X", Options::Triggerbot::LeftHandFOV_X, "Left Hand FOV Y", Options::Triggerbot::LeftHandFOV_Y);
+        readPartFov("Right Upper Arm FOV X", Options::Triggerbot::RightUpperArmFOV_X, "Right Upper Arm FOV Y", Options::Triggerbot::RightUpperArmFOV_Y);
+        readPartFov("Right Lower Arm FOV X", Options::Triggerbot::RightLowerArmFOV_X, "Right Lower Arm FOV Y", Options::Triggerbot::RightLowerArmFOV_Y);
+        readPartFov("Right Hand FOV X", Options::Triggerbot::RightHandFOV_X, "Right Hand FOV Y", Options::Triggerbot::RightHandFOV_Y);
+        readPartFov("Left Upper Leg FOV X", Options::Triggerbot::LeftUpperLegFOV_X, "Left Upper Leg FOV Y", Options::Triggerbot::LeftUpperLegFOV_Y);
+        readPartFov("Left Lower Leg FOV X", Options::Triggerbot::LeftLowerLegFOV_X, "Left Lower Leg FOV Y", Options::Triggerbot::LeftLowerLegFOV_Y);
+        readPartFov("Left Foot FOV X", Options::Triggerbot::LeftFootFOV_X, "Left Foot FOV Y", Options::Triggerbot::LeftFootFOV_Y);
+        readPartFov("Right Upper Leg FOV X", Options::Triggerbot::RightUpperLegFOV_X, "Right Upper Leg FOV Y", Options::Triggerbot::RightUpperLegFOV_Y);
+        readPartFov("Right Lower Leg FOV X", Options::Triggerbot::RightLowerLegFOV_X, "Right Lower Leg FOV Y", Options::Triggerbot::RightLowerLegFOV_Y);
+        readPartFov("Right Foot FOV X", Options::Triggerbot::RightFootFOV_X, "Right Foot FOV Y", Options::Triggerbot::RightFootFOV_Y);
+
+        const json* macro = Section(data, "Macro");
+        ReadInt(macro, "Macro Key", Options::Macro::MacroKey, 0, 255);
+        ReadInt(macro, "Toggle Type", Options::Macro::ToggleType, 0, 1);
+        ReadBool(macro, "Enabled", Options::Macro::Enabled);
+        ReadInt(macro, "Delay", Options::Macro::Delay, 0, 5000);
+
+        const json* crosshair = Section(data, "Crosshair");
+        ReadBool(crosshair, "Enabled", Options::Crosshair::Enabled);
+        ReadInt(crosshair, "Style", Options::Crosshair::Style, 0, 1);
+        ReadFloat(crosshair, "Size", Options::Crosshair::Size, 1.0f, 500.0f);
+        ReadFloat(crosshair, "Gap", Options::Crosshair::Gap, 0.0f, 500.0f);
+        ReadFloat(crosshair, "Thickness", Options::Crosshair::Thickness, 0.5f, 50.0f);
+        ReadFloat(crosshair, "Spin Speed", Options::Crosshair::SpinSpeed, 0.0f, 1000.0f);
+        ReadFloat(crosshair, "Gap Speed", Options::Crosshair::GapSpeed, 0.0f, 100.0f);
+        ReadBool(crosshair, "Gap Tween", Options::Crosshair::GapTween);
+        ReadBool(crosshair, "Show Text", Options::Crosshair::ShowText);
+        ReadFloatArray(crosshair, "Color", Options::Crosshair::Color);
+
+        const json* misc = Section(data, "Misc");
+        ReadBool(misc, "Bypass", Options::Misc::Bypass);
+        ReadBool(misc, "FOV Enabled", Options::Misc::FOVEnabled);
+        ReadFloat(misc, "FOV", Options::Misc::FOV, 20.0f, 120.0f);
+        ReadBool(misc, "Cache NPCs", Options::Misc::CacheNPCs);
+        ReadBool(misc, "Keybind List", Options::Misc::KeybindList);
+        ReadFloat(misc, "Keybind List X", Options::Misc::KeybindListX, 0.0f, 10000.0f);
+        ReadFloat(misc, "Keybind List Y", Options::Misc::KeybindListY, 0.0f, 10000.0f);
+        ReadBool(misc, "Stream Proof", Options::Misc::StreamProof);
+        ReadFloatArray(misc, "Menu Accent Color", Options::Misc::MenuAccentColor);
+        ReadInt(misc, "Menu Key", Options::Misc::MenuKey, 0, 255);
+
+        const json* hitbox = Section(data, "HitboxExpander");
+        ReadBool(hitbox, "Enabled", Options::HitboxExpander::Enabled);
+        ReadFloat(hitbox, "Horizontal Size", Options::HitboxExpander::HorizontalSize, 1.0f, 30.0f);
+        ReadFloat(hitbox, "Vertical Size", Options::HitboxExpander::VerticalSize, 1.0f, 30.0f);
+        ReadBool(hitbox, "Show Hitbox", Options::HitboxExpander::ShowHitbox);
+        ReadFloat(hitbox, "Transparency", Options::HitboxExpander::HitboxTransparency, 0.0f, 1.0f);
+        ReadBool(hitbox, "Walk Through", Options::HitboxExpander::WalkThrough);
+
+        const json* fly = Section(data, "Fly");
+        ReadInt(fly, "Fly Key", Options::Fly::FlyKey, 0, 255);
+        ReadInt(fly, "Toggle Type", Options::Fly::ToggleType, 0, 1);
+        ReadBool(fly, "Enabled", Options::Fly::Enabled);
+        ReadFloat(fly, "Speed", Options::Fly::Speed, 1.0f, 1000.0f);
+
+        const json* walkSpeed = Section(data, "WalkSpeed");
+        ReadInt(walkSpeed, "WalkSpeed Key", Options::WalkSpeed::WalkSpeedKey, 0, 255);
+        ReadInt(walkSpeed, "Toggle Type", Options::WalkSpeed::ToggleType, 0, 1);
+        ReadBool(walkSpeed, "Enabled", Options::WalkSpeed::Enabled);
+        ReadFloat(walkSpeed, "Speed", Options::WalkSpeed::Speed, 1.0f, 1000.0f);
+
+        const json* desync = Section(data, "Desync");
+        ReadBool(desync, "Enabled", Options::Desync::Enabled);
+        ReadInt(desync, "Key", Options::Desync::Key, 0, 255);
+        ReadInt(desync, "Toggle Type", Options::Desync::ToggleType, 0, 1);
+        ReadBool(desync, "Visualizer", Options::Desync::Visualizer);
+        ReadFloatArray(desync, "Visualizer Color", Options::Desync::VisualizerColor);
+
+        // Runtime-only state must never leak from one profile into another.
+        Options::Aimbot::Toggled = false;
+        Options::Aimbot::CurrentTarget = RobloxPlayer{};
+        Options::Triggerbot::Toggled = false;
+        Options::Macro::Toggled = false;
+        Options::Fly::Toggled = false;
+        Options::WalkSpeed::Toggled = false;
+        Options::Desync::Toggled = false;
+
+        return {true, schemaVersion == CurrentSchemaVersion ? "Config loaded" : "Legacy config migrated", {}};
     }
 
-    // Hitbox Expander Loading
-    if (data.contains("HitboxExpander"))
+    inline Result NormalizeFileName(std::string name)
     {
-        if (data["HitboxExpander"].contains("Enabled")) Options::HitboxExpander::Enabled = data["HitboxExpander"]["Enabled"];
-        if (data["HitboxExpander"].contains("Horizontal Size")) Options::HitboxExpander::HorizontalSize = data["HitboxExpander"]["Horizontal Size"];
-        if (data["HitboxExpander"].contains("Vertical Size")) Options::HitboxExpander::VerticalSize = data["HitboxExpander"]["Vertical Size"];
-        if (data["HitboxExpander"].contains("Show Hitbox")) Options::HitboxExpander::ShowHitbox = data["HitboxExpander"]["Show Hitbox"];
-        if (data["HitboxExpander"].contains("Transparency")) Options::HitboxExpander::HitboxTransparency = data["HitboxExpander"]["Transparency"];
-        if (data["HitboxExpander"].contains("Walk Through")) Options::HitboxExpander::WalkThrough = data["HitboxExpander"]["Walk Through"];
+        if (name.empty())
+            return {false, "Config name cannot be empty", {}};
+        if (name == "." || name == ".." || name.find_first_of("\\/:*?\"<>|") != std::string::npos)
+            return {false, "Config name contains invalid characters", {}};
+        if (name.size() > 120)
+            return {false, "Config name is too long", {}};
+
+        std::filesystem::path path(name);
+        if (path.extension().empty())
+            name += ".json";
+        else if (path.extension() != ".json")
+            return {false, "Config file must use the .json extension", {}};
+
+        return {true, {}, name};
     }
 
-    // Fly Loading
-    if (data.contains("Fly"))
+    inline Result Save(const std::string& requestedName)
     {
-        if (data["Fly"].contains("Fly Key")) Options::Fly::FlyKey = data["Fly"]["Fly Key"];
-        if (data["Fly"].contains("Toggle Type")) Options::Fly::ToggleType = data["Fly"]["Toggle Type"];
-        if (data["Fly"].contains("Enabled")) Options::Fly::Enabled = data["Fly"]["Enabled"];
-        if (data["Fly"].contains("Speed")) Options::Fly::Speed = data["Fly"]["Speed"];
+        Result normalized = NormalizeFileName(requestedName);
+        if (!normalized.success)
+            return normalized;
+
+        std::error_code error;
+        const std::filesystem::path directory(Globals::configsPath);
+        std::filesystem::create_directories(directory, error);
+        if (error)
+            return {false, "Could not create the configs directory", normalized.fileName};
+
+        const std::filesystem::path target = directory / normalized.fileName;
+        std::filesystem::path temporary = target;
+        temporary += ".tmp";
+        std::filesystem::path backup = target;
+        backup += ".bak";
+
+        {
+            std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
+            if (!output.is_open())
+                return {false, "Could not open the temporary config file", normalized.fileName};
+            output << Capture().dump(4);
+            output.flush();
+            if (!output.good())
+            {
+                output.close();
+                std::filesystem::remove(temporary, error);
+                return {false, "Could not write the config file", normalized.fileName};
+            }
+        }
+
+        error.clear();
+        if (std::filesystem::exists(target, error))
+        {
+            error.clear();
+            std::filesystem::copy_file(target, backup, std::filesystem::copy_options::overwrite_existing, error);
+            if (error)
+            {
+                std::filesystem::remove(temporary, error);
+                return {false, "Could not create a config backup", normalized.fileName};
+            }
+            error.clear();
+            std::filesystem::remove(target, error);
+            if (error)
+            {
+                std::filesystem::remove(temporary, error);
+                return {false, "Could not replace the existing config", normalized.fileName};
+            }
+        }
+
+        error.clear();
+        std::filesystem::rename(temporary, target, error);
+        if (error)
+        {
+            std::error_code restoreError;
+            if (std::filesystem::exists(backup, restoreError))
+                std::filesystem::copy_file(backup, target, std::filesystem::copy_options::overwrite_existing, restoreError);
+            std::filesystem::remove(temporary, restoreError);
+            return {false, "Could not finalize the config file", normalized.fileName};
+        }
+
+        return {true, "Config saved", normalized.fileName};
     }
 
-    // WalkSpeed Loading
-    if (data.contains("WalkSpeed"))
+    inline Result Load(const std::string& requestedName)
     {
-        if (data["WalkSpeed"].contains("WalkSpeed Key")) Options::WalkSpeed::WalkSpeedKey = data["WalkSpeed"]["WalkSpeed Key"];
-        if (data["WalkSpeed"].contains("Toggle Type")) Options::WalkSpeed::ToggleType = data["WalkSpeed"]["Toggle Type"];
-        if (data["WalkSpeed"].contains("Enabled")) Options::WalkSpeed::Enabled = data["WalkSpeed"]["Enabled"];
-        if (data["WalkSpeed"].contains("Speed")) Options::WalkSpeed::Speed = data["WalkSpeed"]["Speed"];
+        Result normalized = NormalizeFileName(requestedName);
+        if (!normalized.success)
+            return normalized;
+
+        const std::filesystem::path path = std::filesystem::path(Globals::configsPath) / normalized.fileName;
+        std::ifstream input(path, std::ios::binary);
+        if (!input.is_open())
+            return {false, "Config file was not found", normalized.fileName};
+
+        json data;
+        try
+        {
+            data = json::parse(input);
+        }
+        catch (const json::exception& exception)
+        {
+            return {false, std::string("Invalid JSON: ") + exception.what(), normalized.fileName};
+        }
+
+        Result result = Apply(data);
+        result.fileName = normalized.fileName;
+        return result;
     }
-    } catch (...) {}
+
+    inline std::vector<std::string> List()
+    {
+        std::vector<std::string> result;
+        std::error_code error;
+        const std::filesystem::path directory(Globals::configsPath);
+        if (!std::filesystem::exists(directory, error))
+            return result;
+
+        for (std::filesystem::directory_iterator it(directory, error), end; !error && it != end; it.increment(error))
+        {
+            if (it->is_regular_file(error) && it->path().extension() == ".json")
+                result.push_back(it->path().filename().string());
+        }
+        std::sort(result.begin(), result.end());
+        return result;
+    }
 }

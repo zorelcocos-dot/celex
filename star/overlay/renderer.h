@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #pragma comment (lib, "d3d11.lib")
 #pragma comment(lib, "dwmapi.lib")
 #include <dwmapi.h>
@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <string>
 #include <thread>
+#include <stop_token>
 #include <iostream>
 #include <filesystem>
 #include <map>
@@ -19,6 +20,7 @@
 #include "utils/utils.h"
 #include "../rbx/globals/globals.h"
 #include "../rbx/globals/options.h"
+#include "../rbx/globals/runtime.h"
 #include "../features/esp.h"
 #include "../features/aimbot.h"
 #include "../features/triggerbot.h"
@@ -44,7 +46,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 bool IsGameOnTop(const std::string& expectedTitle);
 void SetTransparency(HWND hwnd, bool boolean);
 void DrawNode(RobloxInstance& node);
-void ShowImgui();
+void ShowImgui(std::stop_token stopToken);
 
 void RenderKeybindList(ImDrawList* drawList);
 

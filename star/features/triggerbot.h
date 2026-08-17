@@ -12,7 +12,8 @@ inline void RenderAdvancedFOV(ImDrawList* drawList)
     if (!Options::Triggerbot::AdvancedFOV || !Options::Triggerbot::ShowAdvancedFOV)
         return;
 
-    auto localTeam = Globals::Roblox::LocalPlayer.Team();
+    const auto state = Globals::Roblox::Snapshot();
+    auto localTeam = state.LocalPlayer.Team();
     
     std::vector<RobloxPlayer> currentPlayers;
 		{
@@ -22,7 +23,7 @@ inline void RenderAdvancedFOV(ImDrawList* drawList)
 
 		for (auto& player : currentPlayers)
     {
-        if (player.address == Globals::Roblox::LocalPlayer.address)
+        if (player.address == state.LocalPlayer.address)
             continue;
 
         if (player.Health <= 0)
@@ -196,8 +197,9 @@ inline void RunTriggerbot()
         }
     }
 
-    auto localTeam = Globals::Roblox::LocalPlayer.Team();
-    auto localCharacter = Globals::Roblox::LocalPlayer.Character();
+    const auto state = Globals::Roblox::Snapshot();
+    auto localTeam = state.LocalPlayer.Team();
+    auto localCharacter = state.LocalPlayer.Character();
     auto localHRP = localCharacter.FindFirstChild("HumanoidRootPart");
     if (!localHRP.address)
         return;
@@ -221,7 +223,7 @@ inline void RunTriggerbot()
     // Check each player (already cached above, no need to re-lock)
 	for (auto& player : currentPlayers)
     {
-        if (player.address == Globals::Roblox::LocalPlayer.address)
+        if (player.address == state.LocalPlayer.address)
             continue;
 
         if (player.Health <= 0)

@@ -1,92 +1,109 @@
 #pragma once
-#include "../globals/options.h"
+
 #include "../globals/globals.h"
+#include "../globals/runtime.h"
+
+#include <chrono>
+#include <stop_token>
 #include <thread>
-#include <vector>
 
-
-inline void TPHandler()
+inline void TPHandler(std::stop_token stopToken)
 {
-	while (true)
-	{
-		auto fakeDataModel = Memory->read<uintptr_t>(Memory->getBaseAddress() + Offsets::FakeDataModel::Pointer);
-		auto dataModel = RobloxInstance(0);
-		if (fakeDataModel != 0)
-			dataModel = RobloxInstance(Memory->read<uintptr_t>(fakeDataModel + Offsets::FakeDataModel::RealDataModel));
-		int placeId = 0;
-		if (dataModel.address != 0)
-			placeId = Memory->read<int>(dataModel.address + Offsets::DataModel::PlaceId);
-		uintptr_t visualEngine = 0;
+    while (!Globals::Runtime::ShouldStop(stopToken))
+    {
+        const auto currentState = Globals::Roblox::Snapshot();
+        const auto fakeDataModel = Memory->read<uintptr_t>(
+            Memory->getBaseAddress() + Offsets::FakeDataModel::Pointer);
 
-		bool shouldReinit = false;
-		if (!dataModel || dataModel.address == 0)
-			shouldReinit = true;
-		else {
-			std::string dmName = dataModel.Name();
-			if (dmName == "LuaApp" || placeId != Globals::Roblox::lastPlaceID)
-				shouldReinit = true;
-		}
+        RobloxInstance dataModel(0);
+        if (fakeDataModel != 0)
+        {
+            dataModel = RobloxInstance(Memory->read<uintptr_t>(
+                fakeDataModel + Offsets::FakeDataModel::RealDataModel));
+        }
 
-		if (shouldReinit) // player left the game / teleported
-		{
-			// Wait for new DataModel to be Ugc
-			int retries = 0;
-			while (retries < 60) {
-				fakeDataModel = Memory->read<uintptr_t>(Memory->getBaseAddress() + Offsets::FakeDataModel::Pointer);
-				if (fakeDataModel != 0) {
-					dataModel = RobloxInstance(Memory->read<uintptr_t>(fakeDataModel + Offsets::FakeDataModel::RealDataModel));
-					if (dataModel.address != 0 && dataModel.Name() == "Ugc")
-						break;
-				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				retries++;
-			}
-			if (dataModel.address == 0 || dataModel.Name() != "Ugc") {
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				continue;
-			}
+        int placeId = 0;
+        if (dataModel.address != 0)
+            placeId = Memory->read<int>(dataModel.address + Offsets::DataModel::PlaceId);
 
-			Globals::Roblox::DataModel = dataModel;
+        bool shouldReinitialize = dataModel.address == 0;
+        if (!shouldReinitialize)
+        {
+            const std::string dataModelName = dataModel.Name();
+            shouldReinitialize = dataModelName == "LuaApp" ||
+                (currentState.LastPlaceId != 0 && placeId != currentState.LastPlaceId);
+        }
 
-			visualEngine = Memory->read<uintptr_t>(Memory->getBaseAddress() + Offsets::VisualEngine::Pointer);
-			int veRetries = 0;
-			while (visualEngine == 0 && veRetries < 60)
-			{
-				visualEngine = Memory->read<uintptr_t>(Memory->getBaseAddress() + Offsets::VisualEngine::Pointer);
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				veRetries++;
-			}
-			Globals::Roblox::VisualEngine = visualEngine;
+        if (shouldReinitialize)
+        {
+            dataModel = RobloxInstance(0);
+            for (int retry = 0; retry < 60 && !Globals::Runtime::ShouldStop(stopToken); ++retry)
+            {
+                const auto candidateFakeDataModel = Memory->read<uintptr_t>(
+                    Memory->getBaseAddress() + Offsets::FakeDataModel::Pointer);
+                if (candidateFakeDataModel != 0)
+                {
+                    RobloxInstance candidate(Memory->read<uintptr_t>(
+                        candidateFakeDataModel + Offsets::FakeDataModel::RealDataModel));
+                    if (candidate.address != 0 && candidate.Name() == "Ugc")
+                    {
+                        dataModel = candidate;
+                        break;
+                    }
+                }
+                Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(1000));
+            }
 
-			Globals::Roblox::Workspace = Globals::Roblox::DataModel.FindFirstChildWhichIsA("Workspace");
-			Globals::Roblox::Players = Globals::Roblox::DataModel.FindFirstChildWhichIsA("Players");
-			if (Globals::Roblox::Workspace.address != 0)
-				Globals::Roblox::Camera = Globals::Roblox::Workspace.FindFirstChildWhichIsA("Camera");
-			else
-				Globals::Roblox::Camera = RobloxInstance(0);
+            if (Globals::Runtime::ShouldStop(stopToken))
+                break;
+            if (dataModel.address == 0)
+            {
+                Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(1000));
+                continue;
+            }
 
-			if (Globals::Roblox::Players.address != 0)
-				Globals::Roblox::LocalPlayer = RobloxInstance(Memory->read<uintptr_t>(Globals::Roblox::Players.address + Offsets::Player::LocalPlayer));
-			else
-				Globals::Roblox::LocalPlayer = RobloxInstance(0);
+            uintptr_t visualEngine = 0;
+            for (int retry = 0; retry < 60 && visualEngine == 0 &&
+                 !Globals::Runtime::ShouldStop(stopToken); ++retry)
+            {
+                visualEngine = Memory->read<uintptr_t>(
+                    Memory->getBaseAddress() + Offsets::VisualEngine::Pointer);
+                if (visualEngine == 0)
+                    Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(1000));
+            }
 
-			// FIX: Read NEW placeId after reinit, not old one
-			int newPlaceId = 0;
-			if (Globals::Roblox::DataModel.address != 0)
-				newPlaceId = Memory->read<int>(Globals::Roblox::DataModel.address + Offsets::DataModel::PlaceId);
-			Globals::Roblox::lastPlaceID = newPlaceId;
+            if (Globals::Runtime::ShouldStop(stopToken))
+                break;
 
-			{
-				std::lock_guard<std::mutex> lock1(Globals::Caches::PlayersMutex);
-				Globals::Caches::CachedPlayers.clear();
-			}
-			{
-				std::lock_guard<std::mutex> lock2(Globals::Caches::PlayerObjectsMutex);
-				Globals::Caches::CachedPlayerObjects.clear();
-			}
-		}
+            Globals::Roblox::State nextState;
+            nextState.DataModel = dataModel;
+            nextState.VisualEngine = visualEngine;
+            nextState.Workspace = dataModel.FindFirstChildWhichIsA("Workspace");
+            nextState.Players = dataModel.FindFirstChildWhichIsA("Players");
+            if (nextState.Workspace.address != 0)
+                nextState.Camera = nextState.Workspace.FindFirstChildWhichIsA("Camera");
+            if (nextState.Players.address != 0)
+            {
+                nextState.LocalPlayer = RobloxInstance(Memory->read<uintptr_t>(
+                    nextState.Players.address + Offsets::Player::LocalPlayer));
+            }
+            nextState.LastPlaceId = Memory->read<int>(
+                dataModel.address + Offsets::DataModel::PlaceId);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
+            // Publish a complete state in one operation so readers never observe
+            // a mixture of addresses from two different game sessions.
+            Globals::Roblox::Replace(nextState);
+
+            {
+                std::lock_guard<std::mutex> lock(Globals::Caches::PlayersMutex);
+                Globals::Caches::CachedPlayers.clear();
+            }
+            {
+                std::lock_guard<std::mutex> lock(Globals::Caches::PlayerObjectsMutex);
+                Globals::Caches::CachedPlayerObjects.clear();
+            }
+        }
+
+        Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(100));
+    }
 }
-

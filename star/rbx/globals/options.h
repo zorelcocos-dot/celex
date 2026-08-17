@@ -1,11 +1,16 @@
 #pragma once
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include "../math/math.h"
 #include "globals.h"
 
 namespace Options
 {
+	// ImGui edits options through raw pointers on the render thread. Background
+	// workers take short snapshots under this mutex to avoid data races.
+	inline std::recursive_mutex Mutex;
+
 	namespace Misc
 	{
 		inline bool Bypass = false;

@@ -2,37 +2,47 @@
 
 #include "../rbx/globals/options.h"
 #include "../rbx/globals/globals.h"
+#include "../rbx/globals/runtime.h"
 
-#include <thread>
+#include <chrono>
+#include <stop_token>
 
-inline void MiscLoop()
+inline void MiscLoop(std::stop_token stopToken)
 {
-	while (true)
-	{
-		auto character = Globals::Roblox::LocalPlayer.Character();
-		
-		// Camera FOV
-		if (Options::Misc::FOVEnabled)
-		{
-			Globals::Roblox::Camera.SetFOV(Options::Misc::FOV);
-		}
-		
-		// Headless feature: toggle transparency, restore when disabled
-		{
-			auto head = character.FindFirstChild("Head");
-			if (head.address != 0)
-			{
-				if (Options::ESP::Headless)
-					Memory->write<float>(head.address + Offsets::BasePart::Transparency, 1.0f);
-				else {
-					// Restore to visible if previously hidden (check current transparency)
-					float curTrans = Memory->read<float>(head.address + Offsets::BasePart::Transparency);
-					if (curTrans >= 0.99f)
-						Memory->write<float>(head.address + Offsets::BasePart::Transparency, 0.0f);
-				}
-			}
-		}
-		
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
-	}
+    while (!Globals::Runtime::ShouldStop(stopToken))
+    {
+        bool fovEnabled = false;
+        float fov = 70.0f;
+        bool headless = false;
+        {
+            std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+            fovEnabled = Options::Misc::FOVEnabled;
+            fov = Options::Misc::FOV;
+            headless = Options::ESP::Headless;
+        }
+
+        const auto state = Globals::Roblox::Snapshot();
+        const auto character = state.LocalPlayer.Character();
+
+        if (fovEnabled && state.Camera.address != 0)
+            state.Camera.SetFOV(fov);
+
+        const auto head = character.FindFirstChild("Head");
+        if (head.address != 0)
+        {
+            if (headless)
+            {
+                Memory->write<float>(head.address + Offsets::BasePart::Transparency, 1.0f);
+            }
+            else
+            {
+                const float currentTransparency = Memory->read<float>(
+                    head.address + Offsets::BasePart::Transparency);
+                if (currentTransparency >= 0.99f)
+                    Memory->write<float>(head.address + Offsets::BasePart::Transparency, 0.0f);
+            }
+        }
+
+        Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(500));
+    }
 }

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32F547292E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4B04-88EB-625FBE52EBFB}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets">
+      <UniqueIdentifier>{8A7CBF26-867B-42C1-8706-6441EDE70FB7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Memory\MemoryManager.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="main.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="overlay\imgui\imgui.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="overlay\imgui\imgui_demo.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="overlay\imgui\imgui_draw.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="overlay\imgui\imgui_impl_dx11.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="overlay\imgui\imgui_impl_win32.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="overlay\imgui\imgui_tables.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="overlay\imgui\imgui_widgets.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="overlay\renderer.cpp"><Filter>Source Files</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="features\fly.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="features\hitboxexpander.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="features\speed.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="Memory\MemoryManager.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\globals\globals.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\offsets.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\utils\Header.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\imgui\imconfig.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\imgui\imgui.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\imgui\imgui_impl_dx11.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\imgui\imgui_impl_win32.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\imgui\imgui_internal.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\imgui\imstb_rectpack.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\imgui\imstb_textedit.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\imgui\imstb_truetype.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\renderer.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\utils\utils.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\SDK\SDK.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\math\math.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\Caches\playercache.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\Caches\playerobjectscache.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="features\esp.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\utils\W2S.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\globals\options.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="features\aimbot.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="overlay\imgui\KeyBind.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\Caches\TPHandler.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\configs\configs.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\configs\json.hpp"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\configs\json_fwd.hpp"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="features\misc.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="features\triggerbot.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="features\macro.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="features\crosshair.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="features\desync.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="loader_integration.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="rbx\globals\runtime.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\Inter-Regular.ttf"><Filter>Assets</Filter></None>
+    <None Include="assets\fa-solid-900.ttf"><Filter>Assets</Filter></None>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="Memory\Luck.asm"><Filter>Source Files</Filter></MASM>
+  </ItemGroup>
+</Project>

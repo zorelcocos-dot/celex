@@ -1,28 +1,37 @@
 #pragma once
 #include "../globals/options.h"
 #include "../globals/globals.h"
+#include "../globals/runtime.h"
+#include <stop_token>
 #include <thread>
 #include <vector>
 
 
-inline void CachePlayers()
+inline void CachePlayers(std::stop_token stopToken)
 {
 	std::vector<RobloxInstance> tempList;
 
-	while (true)
+	while (!Globals::Runtime::ShouldStop(stopToken))
 	{
 		try {
 		tempList.clear();
 		tempList.reserve(64);
 
+		const auto state = Globals::Roblox::Snapshot();
+		bool cacheNpcs = false;
+		{
+			std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+			cacheNpcs = Options::Misc::CacheNPCs;
+		}
+
 		// Get local player's character to exclude it from NPC detection
 		RobloxInstance localCharacter(0);
-		if (Globals::Roblox::LocalPlayer.address != 0)
-			localCharacter = Globals::Roblox::LocalPlayer.Character();
+		if (state.LocalPlayer.address != 0)
+			localCharacter = state.LocalPlayer.Character();
 
 		// Cache real players from Players service
-		if (Globals::Roblox::Players.address != 0) {
-			auto children = Globals::Roblox::Players.GetChildren();
+		if (state.Players.address != 0) {
+			auto children = state.Players.GetChildren();
 			for (auto& player : children)
 			{
 				if (!player.address) continue;
@@ -31,8 +40,8 @@ inline void CachePlayers()
 		}
 
 		// Cache NPCs from Workspace - look for any Model with a Humanoid
-		auto workspace = Globals::Roblox::Workspace;
-		if (workspace.address != 0 && Options::Misc::CacheNPCs)
+		auto workspace = state.Workspace;
+		if (workspace.address != 0 && cacheNpcs)
 		{
 			auto workspaceChildren = workspace.GetChildren();
 			
@@ -91,8 +100,8 @@ inline void CachePlayers()
 			std::lock_guard<std::mutex> lock(Globals::Caches::PlayersMutex);
 			Globals::Caches::CachedPlayers = tempList;
 		}
-		} catch (...) {}
-		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+			} catch (...) {}
+			Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(5000));
+		}
 	}
-}
 

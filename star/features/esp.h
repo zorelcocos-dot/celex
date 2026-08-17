@@ -16,10 +16,11 @@ inline bool IsValidScreenPos(const ImVec2& pos) {
 
 inline void RenderESP(ImDrawList* drawList)
 {
-    if (!Globals::Roblox::VisualEngine || !Globals::Roblox::Camera.address || !drawList) return;
-    auto localTeam = Globals::Roblox::LocalPlayer.Team();
-    auto cameraPos = Memory->read<Vectors::Vector3>(Globals::Roblox::Camera.address + Offsets::Camera::Position);
-    auto localCharacter = Globals::Roblox::LocalPlayer.Character();
+    const auto state = Globals::Roblox::Snapshot();
+    if (!state.VisualEngine || !state.Camera.address || !drawList) return;
+    auto localTeam = state.LocalPlayer.Team();
+    auto cameraPos = Memory->read<Vectors::Vector3>(state.Camera.address + Offsets::Camera::Position);
+    auto localCharacter = state.LocalPlayer.Character();
     auto localHead = localCharacter.FindFirstChild("Head");
     auto localTorso = localCharacter.FindFirstChild("Torso");
     if (localTorso.address == 0)
@@ -32,7 +33,7 @@ inline void RenderESP(ImDrawList* drawList)
         localTorsoPos = localTorso.Position();
         localTorsoPos2D = WorldToScreen(localTorsoPos);
     }
-    auto Dimensions = Memory->read<Vectors::Vector2>(Globals::Roblox::VisualEngine + Offsets::VisualEngine::Dimensions);
+    auto Dimensions = Memory->read<Vectors::Vector2>(state.VisualEngine + Offsets::VisualEngine::Dimensions);
     if (Dimensions.x <= 0 || Dimensions.y <= 0) {
         Dimensions = { (float)GetSystemMetrics(SM_CXSCREEN), (float)GetSystemMetrics(SM_CYSCREEN) };
     }
@@ -50,7 +51,7 @@ inline void RenderESP(ImDrawList* drawList)
 
     for (auto& player : currentPlayers)
     {
-        if (player.address == Globals::Roblox::LocalPlayer.address)
+        if (player.address == state.LocalPlayer.address)
             continue;
 
         // Only skip teammates when the local player actually has a team
