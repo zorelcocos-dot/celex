@@ -1,14 +1,16 @@
 #pragma once
+#include <stop_token>
 #include <thread>
 #include "../globals/options.h"
 #include "../../rbx/globals/globals.h"
+#include "../../rbx/globals/runtime.h"
 
-inline void CachePlayerObjects()
+inline void CachePlayerObjects(std::stop_token stopToken)
 {
 	std::vector<RobloxPlayer> tempList;
 	tempList.reserve(64);
 
-	while (true)
+	while (!Globals::Runtime::ShouldStop(stopToken))
 	{
 		try {
 		tempList.clear();
@@ -19,10 +21,10 @@ inline void CachePlayerObjects()
 			currentPlayers = Globals::Caches::CachedPlayers;
 		}
 
-		if (currentPlayers.empty()) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
-			continue;
-		}
+			if (currentPlayers.empty()) {
+				Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(500));
+				continue;
+			}
 
 		for (auto& player : currentPlayers)
 		{
@@ -114,7 +116,7 @@ inline void CachePlayerObjects()
 			std::lock_guard<std::mutex> lock(Globals::Caches::PlayerObjectsMutex);
 			Globals::Caches::CachedPlayerObjects = tempList;
 		}
-		} catch (...) {}
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			} catch (...) {}
+			Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(500));
+		}
 	}
-}

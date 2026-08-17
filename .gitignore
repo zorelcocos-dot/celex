@@ -1,0 +1,40 @@
+# Visual Studio / MSBuild
+.vs/
+**/.vs/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+x64/
+x86/
+Win32/
+*.obj
+*.iobj
+*.ipdb
+*.pdb
+*.ilk
+*.idb
+*.tlog
+*.log
+*.lastbuildstate
+*.recipe
+*.vcxproj.user
+*.suo
+*.user
+*.aps
+*.pch
+*.opendb
+*.VC.db
+
+# Runtime files
+configs/
+imgui.ini
+*.tmp
+*.bak
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

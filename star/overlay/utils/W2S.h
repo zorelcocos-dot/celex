@@ -7,9 +7,10 @@
 
 inline Vectors::Vector2 WorldToScreen(Vectors::Vector3 world)
 {
-    if (Globals::Roblox::VisualEngine == 0)
+    const auto state = Globals::Roblox::Snapshot();
+    if (state.VisualEngine == 0)
         return { -1, -1 };
-    Matrixes::Matrix4 viewmatrix = Memory->read<Matrixes::Matrix4>(Globals::Roblox::VisualEngine + Offsets::VisualEngine::ViewMatrix);
+    Matrixes::Matrix4 viewmatrix = Memory->read<Matrixes::Matrix4>(state.VisualEngine + Offsets::VisualEngine::ViewMatrix);
 
     Vectors::Vector4 quaternion;
 

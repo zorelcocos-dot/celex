@@ -73,7 +73,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)build\</OutDir>
-    <IntDir>$(SolutionDir)build\shit\</IntDir>
+    <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>Phantom.win</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -124,11 +124,15 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(ProjectDir)assets\Inter-Regular.ttf" "$(OutDir)Inter-Regular.ttf"&#xD;&#xA;copy /Y "$(ProjectDir)assets\fa-solid-900.ttf" "$(OutDir)fa-solid-900.ttf"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <!-- Source Files (cpp) -->
   <ItemGroup>
@@ -179,6 +183,13 @@
     <ClInclude Include="features\triggerbot.h" />
     <ClInclude Include="features\macro.h" />
     <ClInclude Include="features\crosshair.h" />
+    <ClInclude Include="features\desync.h" />
+    <ClInclude Include="loader_integration.h" />
+    <ClInclude Include="rbx\globals\runtime.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\Inter-Regular.ttf" />
+    <None Include="assets\fa-solid-900.ttf" />
   </ItemGroup>
   <!-- Assembly Files -->
   <ItemGroup>

@@ -1,74 +1,92 @@
 #pragma once
+
 #include "../rbx/globals/globals.h"
 #include "../rbx/globals/options.h"
-#include <thread>
+#include "../rbx/globals/runtime.h"
+
 #include <chrono>
+#include <stop_token>
 
-void SpeedLoop()
+inline void SpeedLoop(std::stop_token stopToken)
 {
-    while (true)
+    bool wasKeyPressed = false;
+
+    while (Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(10)))
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-        // Handle keybind toggle
-        if (Options::WalkSpeed::WalkSpeedKey != 0)
+        int key = 0;
+        int toggleType = 0;
+        bool enabled = false;
+        bool toggled = false;
+        float speed = 16.0f;
         {
-            static bool wasKeyPressed = false;
-            bool isKeyPressed = (GetAsyncKeyState(Options::WalkSpeed::WalkSpeedKey) & 0x8000) != 0;
-
-            if (Options::WalkSpeed::ToggleType == 1) // Toggle mode
-            {
-                if (isKeyPressed && !wasKeyPressed)
-                {
-                    Options::WalkSpeed::Toggled = !Options::WalkSpeed::Toggled;
-                }
-                wasKeyPressed = isKeyPressed;
-            }
-            else // Hold mode
-            {
-                Options::WalkSpeed::Toggled = isKeyPressed;
-            }
+            std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+            key = Options::WalkSpeed::WalkSpeedKey;
+            toggleType = Options::WalkSpeed::ToggleType;
+            enabled = Options::WalkSpeed::Enabled;
+            toggled = Options::WalkSpeed::Toggled;
+            speed = Options::WalkSpeed::Speed;
         }
 
-        if (!Options::WalkSpeed::Enabled || !Options::WalkSpeed::Toggled)
+        if (key != 0)
+        {
+            const bool isKeyPressed = (GetAsyncKeyState(key) & 0x8000) != 0;
+            if (toggleType == 1)
+            {
+                if (isKeyPressed && !wasKeyPressed)
+                    toggled = !toggled;
+                wasKeyPressed = isKeyPressed;
+            }
+            else
+            {
+                toggled = isKeyPressed;
+            }
+
+            std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+            Options::WalkSpeed::Toggled = toggled;
+        }
+
+        if (!enabled || !toggled)
             continue;
 
         try
         {
-            auto localPlayer = Globals::Roblox::LocalPlayer;
+            const auto state = Globals::Roblox::Snapshot();
+            const auto localPlayer = state.LocalPlayer;
             if (!localPlayer.address)
                 continue;
 
-            auto character = localPlayer.Character();
+            const auto character = localPlayer.Character();
             if (!character.address)
                 continue;
 
-            auto humanoid = character.FindFirstChildWhichIsA("Humanoid");
-            if (!humanoid.address)
+            const auto humanoid = character.FindFirstChildWhichIsA("Humanoid");
+            const auto humanoidRootPart = character.FindFirstChild("HumanoidRootPart");
+            if (!humanoid.address || !humanoidRootPart.address)
                 continue;
 
-            auto humanoidRootPart = character.FindFirstChild("HumanoidRootPart");
-            if (!humanoidRootPart.address)
-                continue;
-
-            // Velocity-based speed
-            uintptr_t primitive = Memory->read<uintptr_t>(humanoidRootPart.address + Offsets::BasePart::Primitive);
+            const uintptr_t primitive = Memory->read<uintptr_t>(
+                humanoidRootPart.address + Offsets::BasePart::Primitive);
             if (!primitive)
                 continue;
 
-            Vectors::Vector3 moveDir = Memory->read<Vectors::Vector3>(humanoid.address + Offsets::Humanoid::MoveDirection);
-            Vectors::Vector3 currentVelocity = Memory->read<Vectors::Vector3>(primitive + Offsets::Primitive::AssemblyLinearVelocity);
-
-            Vectors::Vector3 newVelocity(
-                moveDir.x * Options::WalkSpeed::Speed,
+            const Vectors::Vector3 moveDirection = Memory->read<Vectors::Vector3>(
+                humanoid.address + Offsets::Humanoid::MoveDirection);
+            const Vectors::Vector3 currentVelocity = Memory->read<Vectors::Vector3>(
+                primitive + Offsets::Primitive::AssemblyLinearVelocity);
+            const Vectors::Vector3 newVelocity(
+                moveDirection.x * speed,
                 currentVelocity.y,
-                moveDir.z * Options::WalkSpeed::Speed
-            );
-            Memory->write<Vectors::Vector3>(primitive + Offsets::Primitive::AssemblyLinearVelocity, newVelocity);
+                moveDirection.z * speed);
+
+            Memory->write<Vectors::Vector3>(
+                primitive + Offsets::Primitive::AssemblyLinearVelocity, newVelocity);
         }
         catch (...)
         {
-            // Silently handle errors
+            // The state is refreshed by TPHandler when instances become stale.
         }
     }
+
+    std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+    Options::WalkSpeed::Toggled = false;
 }

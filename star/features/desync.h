@@ -1,9 +1,11 @@
 #pragma once
 #include "../rbx/globals/globals.h"
 #include "../rbx/globals/options.h"
+#include "../rbx/globals/runtime.h"
 #include <thread>
 #include <chrono>
 #include <mutex>
+#include <stop_token>
 
 // Desync implementation matching Foulz reference exactly:
 // - Uses CachedPlayerObjects to get local player HRP position (more reliable)
@@ -16,7 +18,8 @@ inline std::mutex desync_mutex;
 inline Vectors::Vector3 DesyncGetCoords()
 {
     try {
-        auto lp = Globals::Roblox::LocalPlayer;
+        const auto state = Globals::Roblox::Snapshot();
+        auto lp = state.LocalPlayer;
         if (lp.address == 0) return { 0.0f, 0.0f, 0.0f };
         
         auto character = lp.Character();
@@ -32,16 +35,17 @@ inline Vectors::Vector3 DesyncGetCoords()
     catch (...) { return { 0.0f, 0.0f, 0.0f }; }
 }
 
-inline void DesyncLoop()
+inline void DesyncLoop(std::stop_token stopToken)
 {
     bool held = false;
     int old_key_hash = 0;
     std::chrono::steady_clock::time_point chill_out{};
 
-    while (true)
+    while (!Globals::Runtime::ShouldStop(stopToken))
     {
         try
         {
+            std::unique_lock<std::recursive_mutex> optionsLock(Options::Mutex);
             if (!Options::Desync::Enabled)
             {
                 if (Options::Desync::Active)
@@ -57,7 +61,8 @@ inline void DesyncLoop()
                     held = false;
                     Options::Desync::Toggled = false;
                 }
-                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                optionsLock.unlock();
+                Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(200));
                 continue;
             }
 
@@ -123,8 +128,18 @@ inline void DesyncLoop()
                 } catch (...) {}
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            optionsLock.unlock();
+            Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(30));
         }
-        catch (...) { std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
+        catch (...) { Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(100)); }
     }
+
+    std::lock_guard<std::recursive_mutex> optionsLock(Options::Mutex);
+    if (Options::Desync::Active)
+    {
+        Memory->write<bool>(Memory->getBaseAddress() + Options::Desync::NextGenReplicatorOffset + 0xC0, false);
+        Options::Desync::Active = false;
+    }
+    Options::Desync::Toggled = false;
+    Options::Desync::SpawnPos = { 0.0f, 0.0f, 0.0f };
 }

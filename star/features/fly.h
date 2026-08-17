@@ -1,106 +1,103 @@
 #pragma once
+
 #include "../rbx/globals/globals.h"
 #include "../rbx/globals/options.h"
-#include <thread>
+#include "../rbx/globals/runtime.h"
+
 #include <chrono>
+#include <stop_token>
 
-void FlyLoop()
+inline void FlyLoop(std::stop_token stopToken)
 {
-    while (true)
+    bool wasKeyPressed = false;
+
+    while (Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(10)))
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-        // Handle keybind toggle
-        if (Options::Fly::FlyKey != 0)
+        int key = 0;
+        int toggleType = 0;
+        bool enabled = false;
+        bool toggled = false;
+        float speed = 50.0f;
         {
-            static bool wasKeyPressed = false;
-            bool isKeyPressed = (GetAsyncKeyState(Options::Fly::FlyKey) & 0x8000) != 0;
-
-            if (Options::Fly::ToggleType == 1) // Toggle mode
-            {
-                if (isKeyPressed && !wasKeyPressed)
-                {
-                    Options::Fly::Toggled = !Options::Fly::Toggled;
-                }
-                wasKeyPressed = isKeyPressed;
-            }
-            else // Hold mode
-            {
-                Options::Fly::Toggled = isKeyPressed;
-            }
+            std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+            key = Options::Fly::FlyKey;
+            toggleType = Options::Fly::ToggleType;
+            enabled = Options::Fly::Enabled;
+            toggled = Options::Fly::Toggled;
+            speed = Options::Fly::Speed;
         }
 
-        if (!Options::Fly::Enabled || !Options::Fly::Toggled)
+        if (key != 0)
+        {
+            const bool isKeyPressed = (GetAsyncKeyState(key) & 0x8000) != 0;
+            if (toggleType == 1)
+            {
+                if (isKeyPressed && !wasKeyPressed)
+                    toggled = !toggled;
+                wasKeyPressed = isKeyPressed;
+            }
+            else
+            {
+                toggled = isKeyPressed;
+            }
+
+            std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+            Options::Fly::Toggled = toggled;
+        }
+
+        if (!enabled || !toggled)
             continue;
 
         try
         {
-            auto localPlayer = Globals::Roblox::LocalPlayer;
+            const auto state = Globals::Roblox::Snapshot();
+            const auto localPlayer = state.LocalPlayer;
             if (!localPlayer.address)
                 continue;
 
-            auto character = localPlayer.Character();
+            const auto character = localPlayer.Character();
             if (!character.address)
                 continue;
 
-            auto humanoidRootPart = character.FindFirstChild("HumanoidRootPart");
-            if (!humanoidRootPart.address)
+            const auto humanoidRootPart = character.FindFirstChild("HumanoidRootPart");
+            if (!humanoidRootPart.address || !state.Camera.address)
                 continue;
 
-            // Get camera for forward direction
-            auto camera = Globals::Roblox::Camera;
-            if (!camera.address)
-                continue;
+            const auto cameraMatrix = state.Camera.CFrame();
+            const Vectors::Vector3 forward(
+                -cameraMatrix.r02, -cameraMatrix.r12, -cameraMatrix.r22);
+            const Vectors::Vector3 up(0, 1, 0);
 
-            auto cameraMatrix = camera.CFrame();
-            // Roblox look vector is the NEGATED Z row of the CFrame matrix:
-            //   LookVector = (-r02, -r12, -r22)
-            // Using the raw row makes W fly backwards and S fly forwards.
-            Vectors::Vector3 forward = Vectors::Vector3(-cameraMatrix.r02, -cameraMatrix.r12, -cameraMatrix.r22);
-            Vectors::Vector3 up = Vectors::Vector3(0, 1, 0);
-
-            // Get primitive address for velocity
-            uintptr_t primitive = Memory->read<uintptr_t>(humanoidRootPart.address + Offsets::BasePart::Primitive);
+            const uintptr_t primitive = Memory->read<uintptr_t>(
+                humanoidRootPart.address + Offsets::BasePart::Primitive);
             if (!primitive)
                 continue;
 
-            // Read current velocity
-            Vectors::Vector3 velocity = Memory->read<Vectors::Vector3>(primitive + Offsets::Primitive::AssemblyLinearVelocity);
-            float speed = Options::Fly::Speed;
+            Vectors::Vector3 velocity(0, 0, 0);
+            const Vectors::Vector3 right(-forward.z, 0.0f, forward.x);
 
-            // Reset velocity to prevent falling
-            velocity = Vectors::Vector3(0, 0, 0);
-
-            // Camera-relative right vector (right = forward x worldUp).
-            // forward = (r02, r12, r22); with up = (0,1,0):
-            //   right = forward x up = (-forward.z, 0, forward.x)
-            Vectors::Vector3 right = Vectors::Vector3(-forward.z, 0.0f, forward.x);
-
-            // Apply movement based on key inputs
             if (GetAsyncKeyState('W') & 0x8000)
                 velocity = velocity - forward * speed;
-            
             if (GetAsyncKeyState('S') & 0x8000)
                 velocity = velocity + forward * speed;
-            
             if (GetAsyncKeyState('A') & 0x8000)
-                velocity = velocity - right * speed;   // strafe left
-            
+                velocity = velocity - right * speed;
             if (GetAsyncKeyState('D') & 0x8000)
-                velocity = velocity + right * speed;   // strafe right
-            
+                velocity = velocity + right * speed;
             if (GetAsyncKeyState(VK_SPACE) & 0x8000)
                 velocity = velocity + up * speed;
-            
             if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
                 velocity = velocity - up * speed;
 
-            // Write the velocity back
-            Memory->write<Vectors::Vector3>(primitive + Offsets::Primitive::AssemblyLinearVelocity, velocity);
+            Memory->write<Vectors::Vector3>(
+                primitive + Offsets::Primitive::AssemblyLinearVelocity, velocity);
         }
         catch (...)
         {
-            // Silently handle errors
+            // The state is refreshed by TPHandler when instances become stale.
         }
     }
+
+    std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+    Options::Fly::Toggled = false;
 }

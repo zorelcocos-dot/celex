@@ -1,164 +1,248 @@
-#include <iostream>
-#include <thread>
-#include <sstream>
-#include <iomanip>
-#include <filesystem>
 #include <windows.h>
+
+#include <chrono>
+#include <filesystem>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <stop_token>
+#include <string>
+#include <thread>
+#include <vector>
+
 #include "Memory/MemoryManager.h"
-#include "overlay/renderer.h"
-#include "features/misc.h"
-#include "features/hitboxexpander.h"
-#include "features/fly.h"
-#include "features/speed.h"
 #include "features/desync.h"
+#include "features/fly.h"
+#include "features/hitboxexpander.h"
+#include "features/misc.h"
+#include "features/speed.h"
+#include "overlay/renderer.h"
+#include "rbx/Caches/TPHandler.h"
 #include "rbx/Caches/playercache.h"
 #include "rbx/Caches/playerobjectscache.h"
-#include "rbx/Caches/TPHandler.h"
 #include "rbx/globals/globals.h"
+#include "rbx/globals/runtime.h"
 
-bool IsGameRunning(const wchar_t* windowTitle)
+namespace
 {
-    HWND hwnd = FindWindowW(NULL, windowTitle);
-    return hwnd != NULL;
-}
+    constexpr auto ProcessName = "RobloxPlayerBeta.exe";
+    constexpr auto WindowTitle = L"Roblox";
 
-std::string GetExecutableDir()
-{
-    char path[MAX_PATH];
-    GetModuleFileNameA(NULL, path, MAX_PATH);
-    std::filesystem::path exePath(path);
-    return exePath.parent_path().string();
-}
-
-void log(const std::string& message, int type = 0)
-{
-    std::string prefix;
-    switch (type)
+    bool IsGameRunning()
     {
-    case 0:
-        prefix = "[*]";
-        break;
-    case 1:
-        prefix = "[+]";
-        break;
-    case 2:
-        prefix = "[-]";
-        break;
-    default:
-        prefix = "";
-        break;
+        return FindWindowW(nullptr, WindowTitle) != nullptr;
     }
-    std::cout << prefix << " " << message << std::endl;
-}
 
-template<typename T>
-std::string toHexString(T value, bool prefix = false, bool uppercase = false)
-{
-    std::stringstream stream;
-    if (uppercase)
-        stream << std::uppercase;
+    std::string GetExecutableDirectory()
+    {
+        char path[MAX_PATH]{};
+        const DWORD length = GetModuleFileNameA(nullptr, path, MAX_PATH);
+        if (length == 0 || length == MAX_PATH)
+            return std::filesystem::current_path().string();
+        return std::filesystem::path(path).parent_path().string();
+    }
 
-    if (prefix)
-        stream << "0x";
+    void Log(const std::string& message, int type = 0)
+    {
+        const char* prefix = "[*]";
+        if (type == 1)
+            prefix = "[+]";
+        else if (type == 2)
+            prefix = "[-]";
+        std::cout << prefix << ' ' << message << std::endl;
+    }
 
-    stream << std::hex << value;
-    return stream.str();
+    template <typename T>
+    std::string ToHexString(T value)
+    {
+        std::ostringstream stream;
+        stream << std::uppercase << std::hex << value;
+        return stream.str();
+    }
+
+    BOOL WINAPI ConsoleHandler(DWORD signal)
+    {
+        if (signal == CTRL_C_EVENT || signal == CTRL_BREAK_EVENT ||
+            signal == CTRL_CLOSE_EVENT || signal == CTRL_LOGOFF_EVENT ||
+            signal == CTRL_SHUTDOWN_EVENT)
+        {
+            Globals::Runtime::StopRequested.store(true, std::memory_order_relaxed);
+            return TRUE;
+        }
+        return FALSE;
+    }
+
+    bool InitializeRobloxState()
+    {
+        Log("Waiting for the game data model...");
+
+        RobloxInstance dataModel(0);
+        const auto dataModelDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+        while (!Globals::Runtime::StopRequested.load(std::memory_order_relaxed) &&
+               Memory->isProcessAlive() && std::chrono::steady_clock::now() < dataModelDeadline)
+        {
+            const auto fakeDataModel = Memory->read<uintptr_t>(
+                Memory->getBaseAddress() + Offsets::FakeDataModel::Pointer);
+            if (fakeDataModel != 0)
+            {
+                RobloxInstance candidate(Memory->read<uintptr_t>(
+                    fakeDataModel + Offsets::FakeDataModel::RealDataModel));
+                if (candidate.address != 0 && candidate.Name() == "Ugc")
+                {
+                    dataModel = candidate;
+                    break;
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+
+        if (!dataModel.address || !Memory->isProcessAlive())
+            return false;
+
+        uintptr_t visualEngine = 0;
+        const auto visualEngineDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        while (!Globals::Runtime::StopRequested.load(std::memory_order_relaxed) &&
+               Memory->isProcessAlive() && visualEngine == 0 &&
+               std::chrono::steady_clock::now() < visualEngineDeadline)
+        {
+            visualEngine = Memory->read<uintptr_t>(
+                Memory->getBaseAddress() + Offsets::VisualEngine::Pointer);
+            if (visualEngine == 0)
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+        if (visualEngine == 0)
+            return false;
+
+        Globals::Roblox::State state;
+        state.DataModel = dataModel;
+        state.VisualEngine = visualEngine;
+        state.Workspace = dataModel.FindFirstChildWhichIsA("Workspace");
+        state.Players = dataModel.FindFirstChildWhichIsA("Players");
+        if (state.Workspace.address != 0)
+            state.Camera = state.Workspace.FindFirstChildWhichIsA("Camera");
+        if (state.Players.address != 0)
+        {
+            state.LocalPlayer = RobloxInstance(Memory->read<uintptr_t>(
+                state.Players.address + Offsets::Player::LocalPlayer));
+        }
+        state.LastPlaceId = Memory->read<int>(
+            dataModel.address + Offsets::DataModel::PlaceId);
+
+        if (!state.Workspace.address || !state.Players.address ||
+            !state.Camera.address || !state.LocalPlayer.address)
+        {
+            Log("Game state is incomplete; retrying...", 2);
+            return false;
+        }
+
+        Globals::Roblox::Replace(state);
+
+        Log("DataModel -> 0x" + ToHexString(state.DataModel.address), 1);
+        Log("VisualEngine -> 0x" + ToHexString(state.VisualEngine), 1);
+        Log("Workspace -> 0x" + ToHexString(state.Workspace.address), 1);
+        Log("Players -> 0x" + ToHexString(state.Players.address), 1);
+        Log("Camera -> 0x" + ToHexString(state.Camera.address), 1);
+        Log("Logged in as " + state.LocalPlayer.Name(), 1);
+        return true;
+    }
+
+    void ClearSessionState()
+    {
+        Globals::Runtime::GameConnected.store(false, std::memory_order_relaxed);
+        Globals::Roblox::Clear();
+        {
+            std::lock_guard<std::mutex> lock(Globals::Caches::PlayersMutex);
+            Globals::Caches::CachedPlayers.clear();
+        }
+        {
+            std::lock_guard<std::mutex> lock(Globals::Caches::PlayerObjectsMutex);
+            Globals::Caches::CachedPlayerObjects.clear();
+        }
+        Memory->detach();
+    }
 }
 
 int main()
 {
-    if (!IsGameRunning(L"Roblox"))
-    {
-        log("Roblox not found!", 2);
-        log("Waiting for Roblox...", 0);
-        while (!IsGameRunning(L"Roblox"))
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        }
-    }
-
-    log("Roblox found!", 1);
-
-    log("Attaching to Roblox...", 0);
-    if (!Memory->attachToProcess("RobloxPlayerBeta.exe"))
-    {
-        log("Failed to attach to Roblox!", 2);
-        log("Press any key to exit...", 0);
-        std::cin.get();
-        return -1;
-    }
-
-    log("Succesfully attached!", 1);
-
-    if (Memory->getProcessId("RobloxPlayerBeta.exe") == 0)
-    {
-        log("Failed to get Roblox's PID!", 2);
-        log("Press any key to exit...", 0);
-        std::cin.get();
-        return -1;
-    }
-
-    log(std::string("Roblox PID -> " + std::to_string(Memory->getProcessId())), 1);
-    log(std::string("Roblox Base Address -> 0x" + toHexString(Memory->getBaseAddress(), false, true)), 1);
-
-    Globals::executablePath = GetExecutableDir();
+    SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+    Globals::Runtime::StopRequested.store(false, std::memory_order_relaxed);
+    Globals::executablePath = GetExecutableDirectory();
     Globals::configsPath = Globals::executablePath + "\\configs";
-    // Ensure configs directory exists
-    try { std::filesystem::create_directories(Globals::configsPath); } catch (...) {}
 
-    auto fakeDataModel = Memory->read<uintptr_t>(Memory->getBaseAddress() + Offsets::FakeDataModel::Pointer);
-    auto dataModel = RobloxInstance(Memory->read<uintptr_t>(fakeDataModel + Offsets::FakeDataModel::RealDataModel));
+    std::error_code directoryError;
+    std::filesystem::create_directories(Globals::configsPath, directoryError);
+    if (directoryError)
+        Log("Could not create the configs directory", 2);
 
-    while (dataModel.Name() != "Ugc")
+    std::stop_source applicationStop;
+    const std::stop_token applicationToken = applicationStop.get_token();
+    std::jthread overlayThread([applicationToken]
     {
-        fakeDataModel = Memory->read<uintptr_t>(Memory->getBaseAddress() + Offsets::FakeDataModel::Pointer);
-        dataModel = RobloxInstance(Memory->read<uintptr_t>(fakeDataModel + Offsets::FakeDataModel::RealDataModel));
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        ShowImgui(applicationToken);
+    });
+
+    while (!Globals::Runtime::StopRequested.load(std::memory_order_relaxed))
+    {
+        if (!IsGameRunning())
+        {
+            Globals::Runtime::GameConnected.store(false, std::memory_order_relaxed);
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            continue;
+        }
+
+        Log("Roblox found!", 1);
+        Log("Attaching to Roblox...");
+        if (!Memory->attachToProcess(ProcessName))
+        {
+            Log("Attach failed; retrying...", 2);
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            continue;
+        }
+
+        Log("Attached to PID " + std::to_string(Memory->getProcessId()) +
+            " at 0x" + ToHexString(Memory->getBaseAddress()), 1);
+
+        if (!InitializeRobloxState())
+        {
+            ClearSessionState();
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            continue;
+        }
+
+        Globals::Runtime::GameConnected.store(true, std::memory_order_relaxed);
+        Log("Starting workers...", 1);
+
+        std::stop_source sessionStop;
+        const std::stop_token sessionToken = sessionStop.get_token();
+        std::vector<std::jthread> workers;
+        workers.reserve(8);
+        workers.emplace_back([sessionToken] { CachePlayers(sessionToken); });
+        workers.emplace_back([sessionToken] { CachePlayerObjects(sessionToken); });
+        workers.emplace_back([sessionToken] { TPHandler(sessionToken); });
+        workers.emplace_back([sessionToken] { MiscLoop(sessionToken); });
+        workers.emplace_back([sessionToken] { RunHitboxExpander(sessionToken); });
+        workers.emplace_back([sessionToken] { FlyLoop(sessionToken); });
+        workers.emplace_back([sessionToken] { SpeedLoop(sessionToken); });
+        workers.emplace_back([sessionToken] { DesyncLoop(sessionToken); });
+
+        while (!Globals::Runtime::StopRequested.load(std::memory_order_relaxed) &&
+               Memory->isProcessAlive())
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+
+        sessionStop.request_stop();
+        workers.clear(); // std::jthread joins every worker here.
+        ClearSessionState();
+
+        if (!Globals::Runtime::StopRequested.load(std::memory_order_relaxed))
+            Log("Roblox closed; waiting to reconnect...");
     }
 
-    Globals::Roblox::DataModel = dataModel;
-
-    auto visualEngine = Memory->read<uintptr_t>(Memory->getBaseAddress() + Offsets::VisualEngine::Pointer);
-
-    while (visualEngine == 0)
-    {
-        visualEngine = Memory->read<uintptr_t>(Memory->getBaseAddress() + Offsets::VisualEngine::Pointer);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-
-    Globals::Roblox::VisualEngine = visualEngine;
-
-    Globals::Roblox::Workspace = Globals::Roblox::DataModel.FindFirstChildWhichIsA("Workspace");
-    Globals::Roblox::Players = Globals::Roblox::DataModel.FindFirstChildWhichIsA("Players");
-    Globals::Roblox::Camera = Globals::Roblox::Workspace.FindFirstChildWhichIsA("Camera");
-
-    Globals::Roblox::LocalPlayer = RobloxInstance(Memory->read<uintptr_t>(Globals::Roblox::Players.address + Offsets::Player::LocalPlayer));
-
-    Globals::Roblox::lastPlaceID = Memory->read<int>(Globals::Roblox::DataModel.address + Offsets::DataModel::PlaceId);
-
-    log(std::string("DataModel -> 0x" + toHexString(Globals::Roblox::DataModel.address, false, true)), 1);
-    log(std::string("VisualEngine -> 0x" + toHexString(Globals::Roblox::VisualEngine, false, true)), 1);
-
-    log(std::string("Workspace -> 0x" + toHexString(Globals::Roblox::Workspace.address, false, true)), 1);
-    log(std::string("Players -> 0x" + toHexString(Globals::Roblox::Players.address, false, true)), 1);
-    log(std::string("Camera -> 0x" + toHexString(Globals::Roblox::Camera.address, false, true)), 1);
-
-    log(std::string("Logged in as " + Globals::Roblox::LocalPlayer.Name()), 1);
-
-    std::thread(ShowImgui).detach();
-    
-    log("Starting cheat...", 1);
-    
-    std::thread(CachePlayers).detach();
-    std::thread(CachePlayerObjects).detach();
-    std::thread(TPHandler).detach();
-    std::thread(MiscLoop).detach();
-    std::thread(RunHitboxExpander).detach();
-    std::thread(FlyLoop).detach();
-    std::thread(SpeedLoop).detach();
-    std::thread(DesyncLoop).detach();
-
-    std::cin.get();
-
-    return 1;
+    applicationStop.request_stop();
+    overlayThread.join();
+    ClearSessionState();
+    SetConsoleCtrlHandler(ConsoleHandler, FALSE);
+    Log("Shutdown complete.", 1);
+    return 0;
 }

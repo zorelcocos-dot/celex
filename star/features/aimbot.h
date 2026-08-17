@@ -156,8 +156,9 @@ inline RobloxPlayer GetClosestPlayer()
 {
     RobloxPlayer target;
     auto maxDistance = FLT_MAX;
-    auto localTeam = Globals::Roblox::LocalPlayer.Team();
-    auto localCharacter = Globals::Roblox::LocalPlayer.Character();
+    const auto state = Globals::Roblox::Snapshot();
+    auto localTeam = state.LocalPlayer.Team();
+    auto localCharacter = state.LocalPlayer.Character();
     auto localHRP = localCharacter.FindFirstChild("HumanoidRootPart");
 
     // No character / no HumanoidRootPart -> can't measure distances
@@ -178,7 +179,7 @@ inline RobloxPlayer GetClosestPlayer()
         if (!HRP.address)
             continue;
 
-        if (player.address == Globals::Roblox::LocalPlayer.address)
+        if (player.address == state.LocalPlayer.address)
             continue;
 
         // Only skip teammates when the local player actually has a team
@@ -289,13 +290,14 @@ inline float ApplySmoothnessCurve(float smoothness, int curveType)
 
 inline void CameraRotation(const RobloxPlayer& target)
 {
-    if (!Globals::Roblox::Camera.address)
+    const auto state = Globals::Roblox::Snapshot();
+    if (!state.Camera.address)
         return;
 
-    Matrixes::Matrix3x3 currentRotation = Memory->read<Matrixes::Matrix3x3>(Globals::Roblox::Camera.address + Offsets::Camera::Rotation);
+    Matrixes::Matrix3x3 currentRotation = Memory->read<Matrixes::Matrix3x3>(state.Camera.address + Offsets::Camera::Rotation);
 
-    sCFrame cameraCFrame = Globals::Roblox::Camera.CFrame();
-    Vectors::Vector3 camPos = Memory->read<Vectors::Vector3>(Globals::Roblox::Camera.address + Offsets::Camera::Position);
+    sCFrame cameraCFrame = state.Camera.CFrame();
+    Vectors::Vector3 camPos = Memory->read<Vectors::Vector3>(state.Camera.address + Offsets::Camera::Position);
 
     Vectors::Vector3 targetPos = GetTargetPosition(target);
     
@@ -336,7 +338,7 @@ inline void CameraRotation(const RobloxPlayer& target)
     Vectors::Vector4 smoothedQuat = Vectors::Vector4::Slerp(currentQuat, targetQuat, t);
     Matrixes::Matrix3x3 smoothedMatrix = smoothedQuat.ToMatrix();
 
-    Memory->write<Matrixes::Matrix3x3>(Globals::Roblox::Camera.address + Offsets::Camera::Rotation, smoothedMatrix);
+    Memory->write<Matrixes::Matrix3x3>(state.Camera.address + Offsets::Camera::Rotation, smoothedMatrix);
 }
 
 inline void Mouse(const Vectors::Vector2& targetPos, const POINT& p)
@@ -482,10 +484,11 @@ inline void RunAimbot(ImDrawList* drawList)
     if (!Options::Aimbot::Aimbot)
         return;
 
-    auto localTeam = Globals::Roblox::LocalPlayer.Team();
-    auto localCharacter = Globals::Roblox::LocalPlayer.Character();
+    const auto state = Globals::Roblox::Snapshot();
+    auto localTeam = state.LocalPlayer.Team();
+    auto localCharacter = state.LocalPlayer.Character();
     auto localHRP = localCharacter.FindFirstChild("HumanoidRootPart");
-    auto Dimensions = Memory->read<Vectors::Vector2>(Globals::Roblox::VisualEngine + Offsets::VisualEngine::Dimensions);
+    auto Dimensions = Memory->read<Vectors::Vector2>(state.VisualEngine + Offsets::VisualEngine::Dimensions);
     if (Dimensions.x <= 0 || Dimensions.y <= 0) {
         Dimensions = { (float)GetSystemMetrics(SM_CXSCREEN), (float)GetSystemMetrics(SM_CYSCREEN) };
     }

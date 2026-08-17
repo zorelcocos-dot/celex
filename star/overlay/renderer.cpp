@@ -128,7 +128,17 @@ void RenderKeybindList(ImDrawList* drawList) {
         yOffset += lineHeight;
     }
 }
-void ShowImgui() {
+void ShowImgui(std::stop_token stopToken) {
+    struct OverlayLifetime
+    {
+        OverlayLifetime() { Globals::Runtime::OverlayRunning.store(true, std::memory_order_relaxed); }
+        ~OverlayLifetime()
+        {
+            Globals::Runtime::OverlayRunning.store(false, std::memory_order_relaxed);
+            Globals::Runtime::StopRequested.store(true, std::memory_order_relaxed);
+        }
+    } overlayLifetime;
+
     ImGui_ImplWin32_EnableDpiAwareness();
     float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY));
     size_t width = (size_t)GetSystemMetrics(SM_CXSCREEN);
@@ -146,8 +156,10 @@ void ShowImgui() {
     MARGINS Margin = { -1 };
     DwmExtendFrameIntoClientArea(hwnd, &Margin);
     // Apply streamproof if enabled (WDA_EXCLUDEFROMCAPTURE = 0x00000011)
-    if (Options::Misc::StreamProof) {
-        SetWindowDisplayAffinity(hwnd, 0x00000011);
+    {
+        std::lock_guard<std::recursive_mutex> optionsLock(Options::Mutex);
+        if (Options::Misc::StreamProof)
+            SetWindowDisplayAffinity(hwnd, 0x00000011);
     }
     if (!CreateDeviceD3D(hwnd)) {
         CleanupDeviceD3D();
@@ -209,7 +221,7 @@ void ShowImgui() {
     ImVec4 clear_color = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     bool done = false;
     bool menu_open = true;
-    while (!done) {
+    while (!done && !Globals::Runtime::ShouldStop(stopToken)) {
         MSG msg;
         while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE)) {
             ::TranslateMessage(&msg);
@@ -231,6 +243,10 @@ void ShowImgui() {
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
+
+        // ImGui controls mutate primitive option values through raw pointers.
+        // Keep background workers on stable snapshots for the duration of a frame.
+        std::lock_guard<std::recursive_mutex> optionsLock(Options::Mutex);
         if (GetAsyncKeyState(Options::Misc::MenuKey) & 1) {
             menu_open = !menu_open;
             SetTransparency(hwnd, !menu_open);
@@ -622,27 +638,49 @@ void ShowImgui() {
                     AppleSlider("FOV", &Options::Misc::FOV, 20.0f, 120.0f, "%.0f");
                 EndApplePanel();
 
-                BeginApplePanel("Config", 130);
-                static char configNameBuf[64] = "config.json";
+                BeginApplePanel("Config", 170);
+                static char configNameBuf[128] = "config.json";
+                static Config::Result configResult;
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
                 ImGui::InputText("##cfgname", configNameBuf, sizeof(configNameBuf));
                 ImGui::PopItemWidth();
                 if (ImGui::Button("Save Config", ImVec2(ImGui::GetContentRegionAvail().x * 0.48f, 0)))
-                {
-                    std::string cfgName = configNameBuf;
-                    bool valid = !cfgName.empty() && cfgName.find_first_of("\\/:*?\"<>|") == std::string::npos;
-                    if (valid)
-                        CreateConfig(cfgName);
-                }
+                    configResult = Config::Save(configNameBuf);
                 ImGui::SameLine();
                 if (ImGui::Button("Load Config", ImVec2(ImGui::GetContentRegionAvail().x * 0.48f, 0)))
+                    configResult = Config::Load(configNameBuf);
+
+                if (!configResult.message.empty())
                 {
-                    std::string cfgName = configNameBuf;
-                    bool valid = !cfgName.empty() && cfgName.find_first_of("\\/:*?\"<>|") == std::string::npos;
-                    if (valid)
-                        LoadConfig(cfgName);
+                    const ImVec4 statusColor = configResult.success
+                        ? ImVec4(0.35f, 0.85f, 0.50f, 1.0f)
+                        : ImVec4(0.95f, 0.35f, 0.35f, 1.0f);
+                    ImGui::PushStyleColor(ImGuiCol_Text, statusColor);
+                    ImGui::TextWrapped("%s%s%s", configResult.message.c_str(),
+                        configResult.fileName.empty() ? "" : ": ",
+                        configResult.fileName.c_str());
+                    ImGui::PopStyleColor();
                 }
                 EndApplePanel();
+
+                BeginApplePanel("Diagnostics", 135);
+                const bool connected = Globals::Runtime::GameConnected.load(std::memory_order_relaxed);
+                const auto state = Globals::Roblox::Snapshot();
+                std::size_t cachedEntities = 0;
+                {
+                    std::lock_guard<std::mutex> cacheLock(Globals::Caches::PlayerObjectsMutex);
+                    cachedEntities = Globals::Caches::CachedPlayerObjects.size();
+                }
+                ImGui::TextColored(connected ? ImVec4(0.35f, 0.85f, 0.50f, 1.0f)
+                                             : ImVec4(0.95f, 0.65f, 0.30f, 1.0f),
+                                   connected ? "Connected" : "Waiting for Roblox");
+                ImGui::Text("Entities: %zu", cachedEntities);
+                ImGui::Text("DataModel: %s", state.DataModel.address ? "ready" : "not ready");
+                ImGui::Text("Memory failures: R %llu / W %llu",
+                    static_cast<unsigned long long>(Memory->getFailedReadCount()),
+                    static_cast<unsigned long long>(Memory->getFailedWriteCount()));
+                EndApplePanel();
+
                 ImGui::PopItemWidth();
                 ImGui::EndGroup();
 

@@ -1,6 +1,11 @@
 #include "MemoryManager.h"
 #include <vector>
 
+MemoryManager::~MemoryManager()
+{
+	detach();
+}
+
 int32_t MemoryManager::getProcessId(const std::string& processName) {
 	uint32_t processId = 0;
 	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
@@ -27,6 +32,7 @@ int32_t MemoryManager::getProcessId(const std::string& processName) {
 
 uintptr_t MemoryManager::getModuleAddress(const std::string& moduleName) {
 	uintptr_t moduleAddress = 0;
+	std::shared_lock lock(handleMutex);
 
 	if (!processHandle) {
 		return moduleAddress;
@@ -57,40 +63,75 @@ uintptr_t MemoryManager::getModuleAddress(const std::string& moduleName) {
 
 bool MemoryManager::attachToProcess(const std::string& processName)
 {
+	detach();
+
 	auto pid = getProcessId(processName);
 	if (pid == 0) {
 		return false;
 	}
-	HANDLE process = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
+	constexpr DWORD requiredAccess = PROCESS_QUERY_INFORMATION | PROCESS_VM_READ |
+		PROCESS_VM_WRITE | PROCESS_VM_OPERATION;
+	HANDLE process = OpenProcess(requiredAccess, false, pid);
 
 	if (process == INVALID_HANDLE_VALUE || !process) {
 		return false;
 	}
 
-	processHandle = process;
-	processId = pid;
+	{
+		std::unique_lock lock(handleMutex);
+		processHandle = process;
+		processId = pid;
+	}
 
-	baseAddress = getModuleAddress(processName);
-	if (baseAddress == 0) {
-		// Base address not found - still consider attached but log
-		CloseHandle(process);
-		processHandle = nullptr;
-		processId = 0;
+	const uintptr_t moduleAddress = getModuleAddress(processName);
+	if (moduleAddress == 0) {
+		detach();
 		return false;
 	}
+	setBaseAddress(moduleAddress);
 
 	return true;
 }
 
+void MemoryManager::detach()
+{
+	std::unique_lock lock(handleMutex);
+	if (processHandle)
+		CloseHandle(processHandle);
+	processHandle = nullptr;
+	processId = 0;
+	baseAddress = 0;
+}
 
-void MemoryManager::readRaw(uintptr_t address, void* buffer, uintptr_t size) {
+bool MemoryManager::isProcessAlive() const
+{
+	std::shared_lock lock(handleMutex);
+	if (!processHandle)
+		return false;
+	DWORD exitCode = 0;
+	return GetExitCodeProcess(processHandle, &exitCode) && exitCode == STILL_ACTIVE;
+}
+
+bool MemoryManager::readRaw(uintptr_t address, void* buffer, uintptr_t size) {
+	std::shared_lock lock(handleMutex);
 	if (!processHandle || !buffer || address == 0 || size == 0)
-		return;
-	Luck_ReadVirtualMemory(processHandle, reinterpret_cast<void*>(address), buffer, size, nullptr);
+	{
+		failedReads.fetch_add(1, std::memory_order_relaxed);
+		return false;
+	}
+	SIZE_T bytesRead = 0;
+	const int32_t status = Luck_ReadVirtualMemory(
+		processHandle, reinterpret_cast<void*>(address), buffer, size, &bytesRead);
+	if (status < 0 || bytesRead != size)
+	{
+		failedReads.fetch_add(1, std::memory_order_relaxed);
+		return false;
+	}
+	return true;
 }
 
 std::string MemoryManager::readString(uintptr_t address) {
-	if (address == 0 || !processHandle)
+	if (address == 0)
 		return "";
 	std::string result;
 	result.reserve(32);
@@ -143,18 +184,32 @@ std::string MemoryManager::readString(uintptr_t address) {
 	return result;
 }
 
-int32_t MemoryManager::getProcessId() {
+int32_t MemoryManager::getProcessId() const {
+	std::shared_lock lock(handleMutex);
 	return processId;
 }
 
 void MemoryManager::setProcessId(int32_t newProcessId) {
+	std::unique_lock lock(handleMutex);
 	processId = newProcessId;
 }
 
-uintptr_t MemoryManager::getBaseAddress() {
+uintptr_t MemoryManager::getBaseAddress() const {
+	std::shared_lock lock(handleMutex);
 	return baseAddress;
 }
 
 void MemoryManager::setBaseAddress(uintptr_t newBaseAddress) {
+	std::unique_lock lock(handleMutex);
 	baseAddress = newBaseAddress;
+}
+
+uint64_t MemoryManager::getFailedReadCount() const
+{
+	return failedReads.load(std::memory_order_relaxed);
+}
+
+uint64_t MemoryManager::getFailedWriteCount() const
+{
+	return failedWrites.load(std::memory_order_relaxed);
 }

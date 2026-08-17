@@ -1,95 +1,95 @@
 #pragma once
+
 #include "../rbx/globals/options.h"
 #include "../rbx/globals/globals.h"
-#include <thread>
+#include "../rbx/globals/runtime.h"
 
-inline void RunHitboxExpander()
+#include <chrono>
+#include <stop_token>
+
+inline void RunHitboxExpander(std::stop_token stopToken)
 {
-    while (true)
+    while (!Globals::Runtime::ShouldStop(stopToken))
     {
+        bool enabled = false;
+        float horizontalSize = 10.0f;
+        float verticalSize = 10.0f;
+        bool showHitbox = false;
+        float transparency = 0.5f;
+        bool walkThrough = false;
+        {
+            std::lock_guard<std::recursive_mutex> lock(Options::Mutex);
+            enabled = Options::HitboxExpander::Enabled;
+            horizontalSize = Options::HitboxExpander::HorizontalSize;
+            verticalSize = Options::HitboxExpander::VerticalSize;
+            showHitbox = Options::HitboxExpander::ShowHitbox;
+            transparency = Options::HitboxExpander::HitboxTransparency;
+            walkThrough = Options::HitboxExpander::WalkThrough;
+        }
+
+        if (!enabled)
+        {
+            Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(100));
+            continue;
+        }
+
+        const auto state = Globals::Roblox::Snapshot();
+        if (!state.Players.address)
+        {
+            Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(100));
+            continue;
+        }
+
         try
         {
-            if (!Options::HitboxExpander::Enabled)
+            const auto players = state.Players.GetChildren();
+            for (const auto& player : players)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
-            }
-
-            if (!Globals::Roblox::Players.address)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
-            }
-
-            auto players = Globals::Roblox::Players.GetChildren();
-            for (auto player : players)
-            {
-                if (!Options::HitboxExpander::Enabled)
+                if (Globals::Runtime::ShouldStop(stopToken))
                     break;
-
-                if (!player.address || player.address == Globals::Roblox::LocalPlayer.address)
+                if (!player.address || player.address == state.LocalPlayer.address)
                     continue;
 
-                auto character = player.Character();
-                if (!character.address) 
+                const auto character = player.Character();
+                if (!character.address)
                     continue;
 
-                auto hrp = character.FindFirstChild("HumanoidRootPart");
-                if (!hrp.address) 
+                const auto humanoidRootPart = character.FindFirstChild("HumanoidRootPart");
+                if (!humanoidRootPart.address)
                     continue;
 
-                uintptr_t primitive = Memory->read<uintptr_t>(hrp.address + Offsets::BasePart::Primitive);
-                if (!primitive) 
+                const uintptr_t primitive = Memory->read<uintptr_t>(
+                    humanoidRootPart.address + Offsets::BasePart::Primitive);
+                if (!primitive)
                     continue;
 
-                // Set hitbox size (horizontal for X/Z, vertical for Y)
-                Vectors::Vector3 newSize = { 
-                    Options::HitboxExpander::HorizontalSize, 
-                    Options::HitboxExpander::VerticalSize, 
-                    Options::HitboxExpander::HorizontalSize 
+                const Vectors::Vector3 newSize = {
+                    horizontalSize,
+                    verticalSize,
+                    horizontalSize
                 };
                 Memory->write<Vectors::Vector3>(primitive + Offsets::Primitive::Size, newSize);
 
-                // Set CanCollide using proper bit manipulation (from primitive, not hrp)
-                const uintptr_t canCollideAddr = primitive + Offsets::Primitive::Flags;
-                uint8_t currentFlags = Memory->read<uint8_t>(canCollideAddr);
+                const uintptr_t canCollideAddress = primitive + Offsets::Primitive::Flags;
+                const uint8_t currentFlags = Memory->read<uint8_t>(canCollideAddress);
                 constexpr uint8_t canCollideBit = 0x8;
-                
-                if (!Options::HitboxExpander::WalkThrough)
-                {
-                    // Enable collision - set bit
-                    if (!(currentFlags & canCollideBit))
-                    {
-                        uint8_t newFlags = currentFlags | canCollideBit;
-                        Memory->write<uint8_t>(canCollideAddr, newFlags);
-                    }
-                }
-                else
-                {
-                    // Disable collision (walk through) - clear bit
-                    if (currentFlags & canCollideBit)
-                    {
-                        uint8_t newFlags = currentFlags & ~canCollideBit;
-                        Memory->write<uint8_t>(canCollideAddr, newFlags);
-                    }
-                }
+                const uint8_t newFlags = walkThrough
+                    ? static_cast<uint8_t>(currentFlags & ~canCollideBit)
+                    : static_cast<uint8_t>(currentFlags | canCollideBit);
+                if (newFlags != currentFlags)
+                    Memory->write<uint8_t>(canCollideAddress, newFlags);
 
-                // Set transparency if show hitbox is enabled
-                if (Options::HitboxExpander::ShowHitbox)
-                {
-                    Memory->write<float>(hrp.address + Offsets::BasePart::Transparency, Options::HitboxExpander::HitboxTransparency);
-                }
-                else
-                {
-                    Memory->write<float>(hrp.address + Offsets::BasePart::Transparency, 1.0f); // Fully transparent
-                }
+                Memory->write<float>(
+                    humanoidRootPart.address + Offsets::BasePart::Transparency,
+                    showHitbox ? transparency : 1.0f);
             }
         }
         catch (...)
         {
-            // Silently catch any exceptions to prevent crashes
+            // A stale instance can disappear between cache updates. The next
+            // iteration retries against a fresh state snapshot.
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        Globals::Runtime::Sleep(stopToken, std::chrono::milliseconds(50));
     }
 }
