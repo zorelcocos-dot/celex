@@ -40,6 +40,22 @@ Runtime-only values such as active targets, toggle state, cached addresses, and 
 - `star/rbx/` — SDK types, state snapshots, caches, offsets, and configs
 - `star/assets/` — runtime fonts copied by the Release build
 
+## Features
+
+The in-game menu has five tabs: **Aimbot**, **Visuals**, **Movement**, **Misc**, and **Triggerbot**.
+
+- **Aimbot** — camera or mouse aim with target/air bone selection, FOV circle,
+  prediction, smoothness (linear / ease / custom bezier curve), shake, stutter,
+  sticky aim, teamcheck and knockcheck.
+- **Visuals** — 2D/3D/corner boxes, tracers, skeleton, names, distance, health,
+  head circles, headless mode and per-element colors/thicknesses.
+- **Movement** — fly, walk-speed boost, and infinite jump, each with its own
+  keybind, hold/toggle mode and tunable speed/power.
+- **Triggerbot** — radius/range based auto-fire, delay, team/knock checks, and
+  per-bodypart "advanced FOV" hitboxes with live visualization.
+- **Misc** — FOV override, crosshair, stream-proof capture exclusion, keybind
+  list, config save/load, desync and hitbox expander.
+
 ## Tests
 
 The platform-independent config round-trip, migration, clamping, filename validation, and atomic backup tests can be run with:

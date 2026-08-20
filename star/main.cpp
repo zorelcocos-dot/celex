@@ -14,6 +14,7 @@
 #include "features/desync.h"
 #include "features/fly.h"
 #include "features/hitboxexpander.h"
+#include "features/infinitejump.h"
 #include "features/misc.h"
 #include "features/speed.h"
 #include "overlay/renderer.h"
@@ -215,7 +216,7 @@ int main()
         std::stop_source sessionStop;
         const std::stop_token sessionToken = sessionStop.get_token();
         std::vector<std::jthread> workers;
-        workers.reserve(8);
+        workers.reserve(9);
         workers.emplace_back([sessionToken] { CachePlayers(sessionToken); });
         workers.emplace_back([sessionToken] { CachePlayerObjects(sessionToken); });
         workers.emplace_back([sessionToken] { TPHandler(sessionToken); });
@@ -223,6 +224,7 @@ int main()
         workers.emplace_back([sessionToken] { RunHitboxExpander(sessionToken); });
         workers.emplace_back([sessionToken] { FlyLoop(sessionToken); });
         workers.emplace_back([sessionToken] { SpeedLoop(sessionToken); });
+        workers.emplace_back([sessionToken] { InfiniteJumpLoop(sessionToken); });
         workers.emplace_back([sessionToken] { DesyncLoop(sessionToken); });
 
         while (!Globals::Runtime::StopRequested.load(std::memory_order_relaxed) &&

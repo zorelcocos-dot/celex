@@ -206,6 +206,14 @@ namespace Config
             {"Speed", Options::WalkSpeed::Speed}
         };
 
+        j["InfiniteJump"] = {
+            {"Infinite Jump Key", Options::InfiniteJump::InfiniteJumpKey},
+            {"Toggle Type", Options::InfiniteJump::ToggleType},
+            {"Enabled", Options::InfiniteJump::Enabled},
+            {"Jump Power", Options::InfiniteJump::JumpPower},
+            {"Jump Cooldown", Options::InfiniteJump::JumpCooldown}
+        };
+
         j["Desync"] = {
             {"Enabled", Options::Desync::Enabled},
             {"Key", Options::Desync::Key},
@@ -452,6 +460,13 @@ namespace Config
         ReadBool(walkSpeed, "Enabled", Options::WalkSpeed::Enabled);
         ReadFloat(walkSpeed, "Speed", Options::WalkSpeed::Speed, 1.0f, 1000.0f);
 
+        const json* infiniteJump = Section(data, "InfiniteJump");
+        ReadInt(infiniteJump, "Infinite Jump Key", Options::InfiniteJump::InfiniteJumpKey, 0, 255);
+        ReadInt(infiniteJump, "Toggle Type", Options::InfiniteJump::ToggleType, 0, 1);
+        ReadBool(infiniteJump, "Enabled", Options::InfiniteJump::Enabled);
+        ReadFloat(infiniteJump, "Jump Power", Options::InfiniteJump::JumpPower, 0.0f, 1000.0f);
+        ReadFloat(infiniteJump, "Jump Cooldown", Options::InfiniteJump::JumpCooldown, 0.0f, 5000.0f);
+
         const json* desync = Section(data, "Desync");
         ReadBool(desync, "Enabled", Options::Desync::Enabled);
         ReadInt(desync, "Key", Options::Desync::Key, 0, 255);
@@ -466,6 +481,7 @@ namespace Config
         Options::Macro::Toggled = false;
         Options::Fly::Toggled = false;
         Options::WalkSpeed::Toggled = false;
+        Options::InfiniteJump::Toggled = false;
         Options::Desync::Toggled = false;
 
         return {true, schemaVersion == CurrentSchemaVersion ? "Config loaded" : "Legacy config migrated", {}};

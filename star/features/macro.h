@@ -12,7 +12,7 @@ inline void RunMacro()
     // Check keybind
     static bool wasKeyPressed = false;
     bool isKeyPressed = KeyBind::IsPressed(Options::Macro::MacroKey);
-    
+
     if (Options::Macro::ToggleType == 1)
     {
         // Toggle mode
@@ -21,7 +21,7 @@ inline void RunMacro()
             Options::Macro::Toggled = !Options::Macro::Toggled;
         }
         wasKeyPressed = isKeyPressed;
-        
+
         if (!Options::Macro::Toggled)
             return;
     }
@@ -35,44 +35,49 @@ inline void RunMacro()
         }
     }
 
-    // Spam I and O keys with delay
+    // Non-blocking press/release state machine. RunMacro is called once per
+    // frame on the render thread, so a blocking Sleep() here would stall the
+    // entire overlay. Instead we track when to release the pending key.
+    enum class Phase { Idle, Holding };
+    static Phase phase = Phase::Idle;
+    static bool pressI = true; // Alternate between I and O keys
     static auto lastPressTime = std::chrono::steady_clock::now();
-    static bool pressI = true; // Alternate between I and O
-    
-    auto currentTime = std::chrono::steady_clock::now();
-    auto timeSinceLastPress = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastPressTime).count();
+    static auto releaseTime = std::chrono::steady_clock::now();
+    static WORD activeKey = 0;
+
+    const auto currentTime = std::chrono::steady_clock::now();
+
+    if (phase == Phase::Holding)
+    {
+        if (currentTime >= releaseTime)
+        {
+            INPUT up = { 0 };
+            up.type = INPUT_KEYBOARD;
+            up.ki.wVk = activeKey;
+            up.ki.dwFlags = KEYEVENTF_KEYUP;
+            SendInput(1, &up, sizeof(INPUT));
+            activeKey = 0;
+            phase = Phase::Idle;
+        }
+        return;
+    }
+
+    const auto timeSinceLastPress =
+        std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastPressTime).count();
 
     if (timeSinceLastPress >= Options::Macro::Delay)
     {
-        INPUT input = { 0 };
-        input.type = INPUT_KEYBOARD;
-        
-        if (pressI)
-        {
-            // Press I key
-            input.ki.wVk = 0x49; // 'I' key
-            input.ki.dwFlags = 0; // Key down
-            SendInput(1, &input, sizeof(INPUT));
-            
-            Sleep(20);
-            
-            input.ki.dwFlags = KEYEVENTF_KEYUP; // Key up
-            SendInput(1, &input, sizeof(INPUT));
-        }
-        else
-        {
-            // Press O key
-            input.ki.wVk = 0x4F; // 'O' key
-            input.ki.dwFlags = 0; // Key down
-            SendInput(1, &input, sizeof(INPUT));
-            
-            Sleep(20);
-            
-            input.ki.dwFlags = KEYEVENTF_KEYUP; // Key up
-            SendInput(1, &input, sizeof(INPUT));
-        }
-        
-        pressI = !pressI; // Alternate
+        activeKey = pressI ? 0x49 : 0x4F; // 'I' or 'O'
+
+        INPUT down = { 0 };
+        down.type = INPUT_KEYBOARD;
+        down.ki.wVk = activeKey;
+        down.ki.dwFlags = 0; // Key down
+        SendInput(1, &down, sizeof(INPUT));
+
+        releaseTime = currentTime + std::chrono::milliseconds(20);
+        phase = Phase::Holding;
+        pressI = !pressI;
         lastPressTime = currentTime;
     }
 }

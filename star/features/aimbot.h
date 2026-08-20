@@ -450,7 +450,7 @@ inline void MouseSendInput(const Vectors::Vector2& targetPos, const POINT& curre
 
 inline void RenderAimbotFOV(ImDrawList* drawList)
 {
-    if (!Options::Aimbot::Aimbot || !Options::Aimbot::FOV || !Options::Aimbot::ShowFOV)
+    if (!Options::Aimbot::Aimbot || !Options::Aimbot::ShowFOV || Options::Aimbot::FOV <= 0.0f)
         return;
 
     POINT p;

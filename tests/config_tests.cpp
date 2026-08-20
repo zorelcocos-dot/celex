@@ -18,11 +18,16 @@ int main()
     Options::Triggerbot::AdvancedFOV = true;
     Options::Triggerbot::RightFootFOV_Y = 37.0f;
     Options::Desync::Visualizer = true;
+    Options::ESP::CornerESP = true;
+    Options::InfiniteJump::Enabled = true;
+    Options::InfiniteJump::JumpPower = 87.5f;
 
     const auto document = Config::Capture();
     assert(document.at("schemaVersion") == 2);
     assert(document.at("Misc").at("FOV Enabled") == true);
     assert(document.at("Triggerbot").at("Right Foot FOV Y") == 37.0f);
+    assert(document.at("ESP").at("Corner ESP") == true);
+    assert(document.at("InfiniteJump").at("Jump Power") == 87.5f);
 
     Options::Misc::FOVEnabled = false;
     Options::Misc::MenuKey = 0;
@@ -32,6 +37,9 @@ int main()
     Options::Triggerbot::AdvancedFOV = false;
     Options::Triggerbot::RightFootFOV_Y = 0.0f;
     Options::Desync::Visualizer = false;
+    Options::ESP::CornerESP = false;
+    Options::InfiniteJump::Enabled = false;
+    Options::InfiniteJump::JumpPower = 50.0f;
 
     const auto applied = Config::Apply(document);
     assert(applied.success);
@@ -43,6 +51,9 @@ int main()
     assert(Options::Triggerbot::AdvancedFOV);
     assert(std::abs(Options::Triggerbot::RightFootFOV_Y - 37.0f) < 0.001f);
     assert(Options::Desync::Visualizer);
+    assert(Options::ESP::CornerESP);
+    assert(Options::InfiniteJump::Enabled);
+    assert(std::abs(Options::InfiniteJump::JumpPower - 87.5f) < 0.001f);
 
     Config::json invalid = {
         {"schemaVersion", 2},

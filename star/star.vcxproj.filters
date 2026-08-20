@@ -26,6 +26,7 @@
   <ItemGroup>
     <ClInclude Include="features\fly.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="features\hitboxexpander.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="features\infinitejump.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="features\speed.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="Memory\MemoryManager.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="rbx\globals\globals.h"><Filter>Header Files</Filter></ClInclude>
