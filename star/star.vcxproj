@@ -151,6 +151,7 @@
   <ItemGroup>
     <ClInclude Include="features\fly.h" />
     <ClInclude Include="features\hitboxexpander.h" />
+    <ClInclude Include="features\infinitejump.h" />
     <ClInclude Include="features\speed.h" />
     <ClInclude Include="Memory\MemoryManager.h" />
     <ClInclude Include="rbx\globals\globals.h" />

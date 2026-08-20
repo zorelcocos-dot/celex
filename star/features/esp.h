@@ -192,6 +192,34 @@ inline void RenderESP(ImDrawList* drawList)
             }
         }
 
+        if (Options::ESP::CornerESP && left < right && top < bottom)
+        {
+            // Corner boxes: four L-shaped corners sized relative to the box.
+            const float thickness = Options::ESP::BoxThickness;
+            const float outlineThickness = thickness + 1.5f;
+            const float len = std::clamp((right - left) * 0.25f, 4.0f, 24.0f);
+
+            auto corner = [&](float cx, float cy, float sx, float sy)
+            {
+                const ImVec2 a(cx, cy);
+                const ImVec2 b(cx + sx * len, cy);
+                const ImVec2 c(cx, cy + sy * len);
+                if (!Options::ESP::RemoveBorders)
+                {
+                    drawList->AddLine(a, b, IM_COL32(0, 0, 0, 255), outlineThickness);
+                    drawList->AddLine(a, c, IM_COL32(0, 0, 0, 255), outlineThickness);
+                }
+                drawList->AddLine(a, b, cornerColor, thickness);
+                drawList->AddLine(a, c, cornerColor, thickness);
+            };
+
+            // top-left, top-right, bottom-left, bottom-right
+            corner(left, top, 1.0f, 1.0f);
+            corner(right, top, -1.0f, 1.0f);
+            corner(left, bottom, 1.0f, -1.0f);
+            corner(right, bottom, -1.0f, -1.0f);
+        }
+
         if (Options::ESP::Tracers)
         {
             if (!IsValidScreenPos(head2D)) {

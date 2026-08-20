@@ -199,6 +199,17 @@ namespace Options
 		
 		inline bool Toggled = false;
 	}
+	namespace InfiniteJump
+	{
+		inline int InfiniteJumpKey = 0;
+		inline int ToggleType = 0;
+
+		inline bool Enabled = false;
+		inline float JumpPower = 50.0f;
+		inline float JumpCooldown = 100.0f; // milliseconds between jumps
+
+		inline bool Toggled = false;
+	}
 	namespace Desync
 	{
 		inline bool Enabled = false;

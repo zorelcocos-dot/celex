@@ -70,6 +70,15 @@ void RenderKeybindList(ImDrawList* drawList) {
             isActive = (GetAsyncKeyState(Options::WalkSpeed::WalkSpeedKey) & 0x8000) != 0;
         if (isActive) activeBinds.push_back({"WalkSpeed", Options::WalkSpeed::ToggleType == 1 ? "[Toggled]" : "[Hold]"});
     }
+    // Check InfiniteJump
+    if (Options::InfiniteJump::Enabled && Options::InfiniteJump::InfiniteJumpKey != 0) {
+        bool isActive = false;
+        if (Options::InfiniteJump::ToggleType == 1) // Toggle
+            isActive = Options::InfiniteJump::Toggled;
+        else // Hold
+            isActive = (GetAsyncKeyState(Options::InfiniteJump::InfiniteJumpKey) & 0x8000) != 0;
+        if (isActive) activeBinds.push_back({"Jump", Options::InfiniteJump::ToggleType == 1 ? "[Toggled]" : "[Hold]"});
+    }
     // Check Desync
     if (Options::Desync::Enabled && Options::Desync::Key != 0) {
         bool isActive = false;
@@ -337,10 +346,10 @@ void ShowImgui(std::stop_token stopToken) {
 
             // Sidebar Navigation
             static int mainTab = 0;
-            const char* sbn[] = {"Aimbot", "Visuals", "Misc", "Triggerbot"};
-            const char* sbicons[] = {ICON_FA_CROSSHAIRS, ICON_FA_EYE, ICON_FA_SLIDERS, ICON_FA_GUN};
+            const char* sbn[] = {"Aimbot", "Visuals", "Movement", "Misc", "Triggerbot"};
+            const char* sbicons[] = {ICON_FA_CROSSHAIRS, ICON_FA_EYE, ICON_FA_PERSON_RUNNING, ICON_FA_SLIDERS, ICON_FA_GUN};
 
-            for(int i = 0; i < 4; i++) {
+            for(int i = 0; i < 5; i++) {
                 float iy = p.y + 80.0f + i * 45.0f;
                 float ix = p.x + 10.0f;
                 float iw = sidebarW - 20.0f;
@@ -534,6 +543,28 @@ void ShowImgui(std::stop_token stopToken) {
                 ImGui::Dummy(ImVec2(0, 4));
             };
 
+            auto AppleColor = [&](const char* label, float* color) {
+                ImGui::PushID(label);
+                ImGui::BeginGroup();
+                ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", label);
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                ImGui::ColorEdit3("##c3", color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha);
+                ImGui::EndGroup();
+                ImGui::PopID();
+                ImGui::Dummy(ImVec2(0, 4));
+            };
+
+            auto AppleColor4 = [&](const char* label, float* color) {
+                ImGui::PushID(label);
+                ImGui::BeginGroup();
+                ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", label);
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                ImGui::ColorEdit4("##c4", color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar);
+                ImGui::EndGroup();
+                ImGui::PopID();
+                ImGui::Dummy(ImVec2(0, 4));
+            };
+
             auto BeginApplePanel = [&](const char* title, float height = 0) {
                 ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.11f, 0.11f, 0.12f, 1.0f));
                 ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f);
@@ -559,22 +590,32 @@ void ShowImgui(std::stop_token stopToken) {
             ImGui::Dummy(ImVec2(0, 40));
 
             if (mainTab == 0) { // Aimbot
+                const char* toggleTypes[] = {"Hold", "Toggle"};
+                const char* aimTypes[] = {"Camera", "Mouse"};
+                const char* boneTypes[] = {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "Lower Torso", "Upper Torso"};
+                const char* curveTypes[] = {"Linear", "Ease In", "Ease Out", "Ease In-Out", "Custom Bezier"};
+
                 ImGui::BeginGroup();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.48f);
 
-                BeginApplePanel("Main settings", 420);
+                BeginApplePanel("Main settings", 520);
                 AppleToggle("Enabled", "Master switch for aimbot", &Options::Aimbot::Aimbot);
                 AppleBind("Aimbot Key", &Options::Aimbot::AimbotKey);
-                const char* aimTypes[] = {"Camera", "Mouse"};
                 AppleCombo("Aiming Type", &Options::Aimbot::AimingType, aimTypes, 2);
-                const char* toggleTypes[] = {"Hold", "Toggle"};
                 AppleCombo("Activation Mode", &Options::Aimbot::ToggleType, toggleTypes, 2);
+
+                AppleCombo("Target Bone", &Options::Aimbot::TargetBone, boneTypes, 8);
+                AppleCombo("Air Bone", &Options::Aimbot::AirTargetBone, boneTypes, 8);
 
                 AppleToggle("Prediction", "Predict target movement", &Options::Aimbot::Prediction);
                 if (Options::Aimbot::Prediction) {
                     AppleSlider("Pred X", &Options::Aimbot::PredictionX, 0.0f, 10.0f, "%.2f");
                     AppleSlider("Pred Y", &Options::Aimbot::PredictionY, 0.0f, 10.0f, "%.2f");
                 }
+
+                AppleToggle("Show FOV", "Draw aimbot FOV circle", &Options::Aimbot::ShowFOV);
+                if (Options::Aimbot::ShowFOV)
+                    AppleToggle("Fill FOV", "Fill the FOV circle", &Options::Aimbot::ShowFOVFill);
                 EndApplePanel();
                 ImGui::PopItemWidth();
                 ImGui::EndGroup();
@@ -582,12 +623,26 @@ void ShowImgui(std::stop_token stopToken) {
                 ImGui::SameLine(0, 20);
 
                 ImGui::BeginGroup();
-                BeginApplePanel("Modifiers", 420);
+                BeginApplePanel("Modifiers", 560);
                 AppleSlider("Smoothing", &Options::Aimbot::Smoothness, 0.0f, 1.0f, "%.2f");
+                AppleCombo("Curve", &Options::Aimbot::SmoothnessCurve, curveTypes, 5);
+                if (Options::Aimbot::SmoothnessCurve == 4) {
+                    AppleToggle("Custom Curve", "Use custom bezier points", &Options::Aimbot::CustomCurveEnabled);
+                    AppleSlider("Curve P1", &Options::Aimbot::CustomCurveP1[0], 0.0f, 1.0f, "%.2f");
+                    AppleSlider("Curve P2", &Options::Aimbot::CustomCurveP2[0], 0.0f, 1.0f, "%.2f");
+                }
                 AppleSlider("FOV", &Options::Aimbot::FOV, 10.0f, 360.0f, "%.0f");
                 AppleSlider("Max Distance", &Options::Aimbot::Range, 10.0f, 10000.0f, "%.0f");
 
                 AppleToggle("Shake", "Simulate recoil/shake", &Options::Aimbot::Shake);
+                if (Options::Aimbot::Shake)
+                    AppleSlider("Shake Intensity", &Options::Aimbot::ShakeIntensity, 0.0f, 100.0f, "%.1f");
+                AppleToggle("Stutter", "Skip aim every N frames", &Options::Aimbot::Stutter);
+                if (Options::Aimbot::Stutter) {
+                    float stutterF = (float)Options::Aimbot::StutterTicks;
+                    AppleSlider("Stutter Ticks", &stutterF, 1.0f, 100.0f, "%.0f");
+                    Options::Aimbot::StutterTicks = (int)stutterF;
+                }
                 AppleToggle("Sticky Aim", "Keep aiming at same target", &Options::Aimbot::StickyAim);
                 AppleToggle("Teamcheck", "Ignore teammates", &Options::Aimbot::TeamCheck);
                 AppleToggle("Knockcheck", "Ignore downed players", &Options::Aimbot::DownedCheck);
@@ -595,18 +650,33 @@ void ShowImgui(std::stop_token stopToken) {
                 ImGui::EndGroup();
 
             } else if (mainTab == 1) { // Visuals
+                const char* boxTypes[] = {"None", "2D Box", "3D Box"};
+                const char* tracerStartTypes[] = {"Bottom", "Top", "Mouse", "Torso"};
+
                 ImGui::BeginGroup();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.48f);
 
-                BeginApplePanel("ESP Targets", 400);
+                BeginApplePanel("ESP Targets", 480);
                 AppleToggle("Names", "Show player names", &Options::ESP::Name);
                 AppleToggle("Distance", "Show distance to player", &Options::ESP::Distance);
                 AppleToggle("Health", "Show player health", &Options::ESP::Health);
                 AppleToggle("Tracers", "Draw lines to players", &Options::ESP::Tracers);
-                AppleToggle("Teamcheck", "Hide teammates", &Options::ESP::TeamCheck);
                 AppleToggle("Skeleton", "Draw player skeleton", &Options::ESP::Skeleton);
+                AppleToggle("Corner ESP", "Draw corner boxes", &Options::ESP::CornerESP);
                 AppleToggle("Head Circle", "Draw circle on heads", &Options::ESP::HeadCircle);
                 AppleToggle("Headless", "Hide your own head", &Options::ESP::Headless);
+                AppleToggle("Teamcheck", "Hide teammates", &Options::ESP::TeamCheck);
+                AppleToggle("Remove Borders", "Disable ESP outlines", &Options::ESP::RemoveBorders);
+                EndApplePanel();
+
+                BeginApplePanel("Colors", 300);
+                AppleColor("Name", Options::ESP::Color);
+                AppleColor("Box", Options::ESP::BoxColor);
+                AppleColor("Skeleton", Options::ESP::SkeletonColor);
+                AppleColor("Tracer", Options::ESP::TracerColor);
+                AppleColor("Corner", Options::ESP::CornerColor);
+                AppleColor("3D Box", Options::ESP::ESP3DColor);
+                AppleColor("Head Circle", Options::ESP::HeadCircleColor);
                 EndApplePanel();
                 ImGui::PopItemWidth();
                 ImGui::EndGroup();
@@ -614,19 +684,58 @@ void ShowImgui(std::stop_token stopToken) {
                 ImGui::SameLine(0, 20);
 
                 ImGui::BeginGroup();
-                BeginApplePanel("ESP Settings", 280);
-                const char* boxTypes[] = {"None", "2D Box", "3D Box"};
+                BeginApplePanel("ESP Settings", 420);
                 AppleCombo("Box Type", &Options::ESP::BoxType, boxTypes, 3);
+                AppleCombo("Tracer Start", &Options::ESP::TracersStart, tracerStartTypes, 4);
                 AppleSlider("Box Thickness", &Options::ESP::BoxThickness, 1.0f, 10.0f, "%.1f");
                 AppleSlider("Tracer Thickness", &Options::ESP::TracerThickness, 1.0f, 10.0f, "%.1f");
+                AppleSlider("Skeleton Thickness", &Options::ESP::SkeletonThickness, 1.0f, 10.0f, "%.1f");
+                AppleSlider("3D Thickness", &Options::ESP::ESP3DThickness, 1.0f, 10.0f, "%.1f");
+                AppleSlider("Head Circle Max", &Options::ESP::HeadCircleMaxScale, 0.5f, 10.0f, "%.1f");
                 EndApplePanel();
                 ImGui::EndGroup();
 
-            } else if (mainTab == 2) { // Misc
+            } else if (mainTab == 2) { // Movement
+                const char* moveModes[] = {"Hold", "Toggle"};
+
                 ImGui::BeginGroup();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.48f);
 
-                BeginApplePanel("Utility", 380);
+                BeginApplePanel("Fly", 300);
+                AppleToggle("Enabled", "Fly in any direction", &Options::Fly::Enabled);
+                AppleBind("Fly Key", &Options::Fly::FlyKey);
+                AppleCombo("Activation Mode", &Options::Fly::ToggleType, moveModes, 2);
+                AppleSlider("Speed", &Options::Fly::Speed, 1.0f, 500.0f, "%.0f");
+                EndApplePanel();
+
+                BeginApplePanel("Walk Speed", 300);
+                AppleToggle("Enabled", "Boost walk speed", &Options::WalkSpeed::Enabled);
+                AppleBind("Speed Key", &Options::WalkSpeed::WalkSpeedKey);
+                AppleCombo("Activation Mode", &Options::WalkSpeed::ToggleType, moveModes, 2);
+                AppleSlider("Speed", &Options::WalkSpeed::Speed, 1.0f, 500.0f, "%.0f");
+                EndApplePanel();
+                ImGui::PopItemWidth();
+                ImGui::EndGroup();
+
+                ImGui::SameLine(0, 20);
+
+                ImGui::BeginGroup();
+                BeginApplePanel("Infinite Jump", 300);
+                AppleToggle("Enabled", "Auto jump repeatedly", &Options::InfiniteJump::Enabled);
+                AppleBind("Jump Key", &Options::InfiniteJump::InfiniteJumpKey);
+                AppleCombo("Activation Mode", &Options::InfiniteJump::ToggleType, moveModes, 2);
+                AppleSlider("Jump Power", &Options::InfiniteJump::JumpPower, 0.0f, 300.0f, "%.0f");
+                float jumpCooldownF = Options::InfiniteJump::JumpCooldown;
+                AppleSlider("Cooldown (ms)", &jumpCooldownF, 0.0f, 1000.0f, "%.0f");
+                Options::InfiniteJump::JumpCooldown = jumpCooldownF;
+                EndApplePanel();
+                ImGui::EndGroup();
+
+            } else if (mainTab == 3) { // Misc
+                ImGui::BeginGroup();
+                ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.48f);
+
+                BeginApplePanel("Utility", 440);
                 AppleToggle("Show FOV", "Render aimbot FOV circle", &Options::Aimbot::ShowFOV);
                 AppleToggle("Crosshair", "Custom crosshair", &Options::Crosshair::Enabled);
                 AppleToggle("Stream Proof", "Hide overlay from capture", &Options::Misc::StreamProof);
@@ -636,6 +745,7 @@ void ShowImgui(std::stop_token stopToken) {
                 AppleToggle("Custom FOV", "Override camera FOV", &Options::Misc::FOVEnabled);
                 if (Options::Misc::FOVEnabled)
                     AppleSlider("FOV", &Options::Misc::FOV, 20.0f, 120.0f, "%.0f");
+                AppleColor("Accent Color", Options::Misc::MenuAccentColor);
                 EndApplePanel();
 
                 BeginApplePanel("Config", 170);
@@ -681,22 +791,41 @@ void ShowImgui(std::stop_token stopToken) {
                     static_cast<unsigned long long>(Memory->getFailedWriteCount()));
                 EndApplePanel();
 
+                BeginApplePanel("Crosshair", 320);
+                if (Options::Crosshair::Enabled)
+                {
+                    const char* chStyles[] = {"Static", "Pulse"};
+                    AppleCombo("Style", &Options::Crosshair::Style, chStyles, 2);
+                    AppleSlider("Size", &Options::Crosshair::Size, 1.0f, 100.0f, "%.0f");
+                    AppleSlider("Gap", &Options::Crosshair::Gap, 0.0f, 100.0f, "%.0f");
+                    AppleSlider("Thickness", &Options::Crosshair::Thickness, 0.5f, 20.0f, "%.1f");
+                    AppleSlider("Spin Speed", &Options::Crosshair::SpinSpeed, 0.0f, 360.0f, "%.0f");
+                    AppleToggle("Gap Tween", "Animate gap size", &Options::Crosshair::GapTween);
+                    if (Options::Crosshair::GapTween)
+                        AppleSlider("Gap Speed", &Options::Crosshair::GapSpeed, 0.0f, 20.0f, "%.1f");
+                    AppleToggle("Show Text", "Draw Star.gg label", &Options::Crosshair::ShowText);
+                    AppleColor4("Color", Options::Crosshair::Color);
+                }
+                EndApplePanel();
+
                 ImGui::PopItemWidth();
                 ImGui::EndGroup();
 
                 ImGui::SameLine(0, 20);
 
                 ImGui::BeginGroup();
-                BeginApplePanel("Desync", 240);
+                BeginApplePanel("Desync", 300);
                 AppleToggle("Enable Desync", "Desynchronize player state", &Options::Desync::Enabled);
                 AppleBind("Desync Key", &Options::Desync::Key);
                 const char* desyncModes[] = {"Hold", "Toggle"};
                 AppleCombo("Mode", &Options::Desync::ToggleType, desyncModes, 2);
                 AppleToggle("Show Server Pos", "Visualize real position", &Options::Desync::Visualizer);
+                if (Options::Desync::Visualizer)
+                    AppleColor("Server Pos Color", Options::Desync::VisualizerColor);
                 EndApplePanel();
 
                 ImGui::Dummy(ImVec2(0, 12));
-                BeginApplePanel("Hitbox Expander", 260);
+                BeginApplePanel("Hitbox Expander", 320);
                 AppleToggle("Enabled", "Expand hitboxes", &Options::HitboxExpander::Enabled);
                 if (Options::HitboxExpander::Enabled)
                 {
@@ -704,11 +833,18 @@ void ShowImgui(std::stop_token stopToken) {
                     AppleSlider("Vertical Size", &Options::HitboxExpander::VerticalSize, 1.0f, 30.0f, "%.1f");
                     AppleToggle("Walk Through", "Disable collision on hitbox", &Options::HitboxExpander::WalkThrough);
                     AppleToggle("Show Hitbox", "Make hitbox visible", &Options::HitboxExpander::ShowHitbox);
+                    if (Options::HitboxExpander::ShowHitbox)
+                        AppleSlider("Transparency", &Options::HitboxExpander::HitboxTransparency, 0.0f, 1.0f, "%.2f");
                 }
+                EndApplePanel();
+
+                BeginApplePanel("Keybind List", 140);
+                AppleSlider("Position X", &Options::Misc::KeybindListX, 0.0f, 3000.0f, "%.0f");
+                AppleSlider("Position Y", &Options::Misc::KeybindListY, 0.0f, 3000.0f, "%.0f");
                 EndApplePanel();
                 ImGui::EndGroup();
 
-            } else if (mainTab == 3) { // Triggerbot
+            } else if (mainTab == 4) { // Triggerbot
                 ImGui::BeginGroup();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.48f);
 
@@ -722,6 +858,9 @@ void ShowImgui(std::stop_token stopToken) {
                 AppleSlider("Delay (ms)", &delayF, 0.0f, 500.0f, "%.0f");
                 Options::Triggerbot::Delay = (int)delayF;
 
+                AppleSlider("Radius", &Options::Triggerbot::Radius, 0.0f, 200.0f, "%.0f");
+                AppleSlider("Range", &Options::Triggerbot::Range, 10.0f, 10000.0f, "%.0f");
+
                 AppleToggle("Teamcheck", "Ignore teammates", &Options::Triggerbot::TeamCheck);
                 AppleToggle("Knockcheck", "Ignore downed players", &Options::Triggerbot::DownedCheck);
                 AppleToggle("Advanced FOV", "Per-bodypart hitboxes", &Options::Triggerbot::AdvancedFOV);
@@ -729,6 +868,34 @@ void ShowImgui(std::stop_token stopToken) {
                     AppleToggle("Show Advanced FOV", "Visualize per-part boxes", &Options::Triggerbot::ShowAdvancedFOV);
                 EndApplePanel();
                 ImGui::PopItemWidth();
+                ImGui::EndGroup();
+
+                ImGui::SameLine(0, 20);
+
+                ImGui::BeginGroup();
+                if (Options::Triggerbot::AdvancedFOV)
+                {
+                    BeginApplePanel("Per-Part FOV", 620);
+                    auto partFov = [&](const char* label, float* x, float* y) {
+                        AppleSlider(label, x, 0.0f, 200.0f, "%.0f");
+                        ImGui::PushID(label);
+                        AppleSlider("Vertical", y, 0.0f, 200.0f, "%.0f");
+                        ImGui::PopID();
+                    };
+                    partFov("Head X", &Options::Triggerbot::HeadFOV_X, &Options::Triggerbot::HeadFOV_Y);
+                    partFov("Torso X", &Options::Triggerbot::TorsoFOV_X, &Options::Triggerbot::TorsoFOV_Y);
+                    partFov("Upper Torso X", &Options::Triggerbot::UpperTorsoFOV_X, &Options::Triggerbot::UpperTorsoFOV_Y);
+                    partFov("Lower Torso X", &Options::Triggerbot::LowerTorsoFOV_X, &Options::Triggerbot::LowerTorsoFOV_Y);
+                    partFov("Left Upper Arm X", &Options::Triggerbot::LeftUpperArmFOV_X, &Options::Triggerbot::LeftUpperArmFOV_Y);
+                    partFov("Right Upper Arm X", &Options::Triggerbot::RightUpperArmFOV_X, &Options::Triggerbot::RightUpperArmFOV_Y);
+                    partFov("Left Hand X", &Options::Triggerbot::LeftHandFOV_X, &Options::Triggerbot::LeftHandFOV_Y);
+                    partFov("Right Hand X", &Options::Triggerbot::RightHandFOV_X, &Options::Triggerbot::RightHandFOV_Y);
+                    partFov("Left Upper Leg X", &Options::Triggerbot::LeftUpperLegFOV_X, &Options::Triggerbot::LeftUpperLegFOV_Y);
+                    partFov("Right Upper Leg X", &Options::Triggerbot::RightUpperLegFOV_X, &Options::Triggerbot::RightUpperLegFOV_Y);
+                    partFov("Left Foot X", &Options::Triggerbot::LeftFootFOV_X, &Options::Triggerbot::LeftFootFOV_Y);
+                    partFov("Right Foot X", &Options::Triggerbot::RightFootFOV_X, &Options::Triggerbot::RightFootFOV_Y);
+                    EndApplePanel();
+                }
                 ImGui::EndGroup();
             }
 
